@@ -80,8 +80,5 @@ public class ElroConnectsDeviceTemperatureSensor extends ElroConnectsDevice {
                 handler.updateState(HUMIDITY, new QuantityType<>(humidity, Units.PERCENT));
                 handler.updateStatus(ThingStatus.ONLINE);
         }
-
-        logger.debug("Device ID {}, battery level {}, temperature {}, humidity {}", deviceId, batteryLevel, temperature,
-                humidity);
     }
 }

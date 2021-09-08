@@ -81,7 +81,5 @@ public class ElroConnectsDevicePowerSocket extends ElroConnectsDevice {
         } else {
             handler.updateStatus(ThingStatus.ONLINE);
         }
-
-        logger.debug("Device ID {}, status switched to {}", deviceId, state);
     }
 }

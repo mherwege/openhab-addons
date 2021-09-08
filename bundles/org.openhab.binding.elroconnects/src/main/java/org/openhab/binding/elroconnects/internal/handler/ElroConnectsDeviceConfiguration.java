@@ -13,7 +13,6 @@
 package org.openhab.binding.elroconnects.internal.handler;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.eclipse.jdt.annotation.Nullable;
 
 /**
  * The {@link ElroConnectsDeviceConfiguration} class contains fields mapping thing configuration parameters.
@@ -23,5 +22,5 @@ import org.eclipse.jdt.annotation.Nullable;
 @NonNullByDefault
 public class ElroConnectsDeviceConfiguration {
 
-    public @Nullable Integer deviceId;
+    public int deviceId = 0;
 }

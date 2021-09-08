@@ -100,7 +100,5 @@ public class ElroConnectsDeviceEntrySensor extends ElroConnectsDevice {
                 handler.updateState(LOW_BATTERY, (batteryLevel < 15) ? OnOffType.ON : OnOffType.OFF);
                 handler.updateStatus(ThingStatus.ONLINE);
         }
-
-        logger.debug("Device ID {}, battery level {}, status {}", deviceId, batteryLevel, elroStatus);
     }
 }

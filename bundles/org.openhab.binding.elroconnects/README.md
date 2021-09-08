@@ -91,12 +91,12 @@ All these things have the same channels:
 
 | Channel Type ID    | Item Type            | Access Mode | Description                                        |
 |--------------------|----------------------|-------------|----------------------------------------------------|
-| `mutealarm`        | Switch               | RW          | mute alarm                                         |
-| `testalarm`        | Switch               | RW          | test alarm                                         |
+| `muteAlarm`        | Switch               | RW          | mute alarm                                         |
+| `testAlarm`        | Switch               | RW          | test alarm                                         |
 | `battery`          | Number               | R           | battery level in %                                 |
-| `lowbattery`       | Switch               | R           | on for low battery (below 15%)                     |
+| `lowBattery`       | Switch               | R           | on for low battery (below 15%)                     |
 
-Each also has a trigger channel, resp. `smokealarm`, `coalarm`, `heatalarm` and `wateralarm`.
+Each also has a trigger channel, resp. `smokeAlarm`, `coAlarm`, `heatAlarm` and `waterAlarm`.
 
 ## Door/window contact
 
@@ -106,9 +106,9 @@ The `entrysensor` thing has the following channels:
 |--------------------|----------------------|-------------|----------------------------------------------------|
 | `entry`            | Contact              | R           | open/closed door/window                            |
 | `battery`          | Number               | R           | battery level in %                                 |
-| `lowbattery`       | Switch               | R           | on for low battery (below 15%)                     |
+| `lowBattery`       | Switch               | R           | on for low battery (below 15%)                     |
 
-The `entrysensor` thing also has a trigger channel, `entryalarm`.
+The `entrysensor` thing also has a trigger channel, `entryAlarm`.
 
 ## Motion sensor
 
@@ -118,9 +118,9 @@ The `motionsensor` thing has the following channels:
 |--------------------|----------------------|-------------|----------------------------------------------------|
 | `motion`           | Switch               | R           | on when motion detected                            |
 | `battery`          | Number               | R           | battery level in %                                 |
-| `lowbattery`       | Switch               | R           | on for low battery (below 15%)                     |
+| `lowBattery`       | Switch               | R           | on for low battery (below 15%)                     |
 
-The `motionsensor` thing also has a trigger channel, `motionalarm`.
+The `motionsensor` thing also has a trigger channel, `motionAlarm`.
 
 ## Temperature and humidity monitor
 
@@ -131,7 +131,7 @@ The `temperaturesensor` thing has the following channels:
 | `temperature`      | Number:Temperature   | R           | temperature                                        |
 | `humidity`         | Number:Dimensionless | R           | device status                                      |
 | `battery`          | Number               | R           | battery level in %                                 |
-| `lowbattery`       | Switch               | R           | on for low battery (below 15%)                     |
+| `lowBattery`       | Switch               | R           | on for low battery (below 15%)                     |
 
 ## Plug-in switch
 
@@ -139,7 +139,7 @@ The `powersocket` thing has only one channel:
 
 | Channel Type ID    | Item Type            | Access Mode | Description                                        |
 |--------------------|----------------------|-------------|----------------------------------------------------|
-| `powerstate`       | Switch               | RW          | power on/off                                       |
+| `powerState`       | Switch               | RW          | power on/off                                       |
 
 
 ## Full Example
@@ -180,7 +180,7 @@ Example trigger rule:
 ```
 rule "example trigger rule"
 when
-    Channel 'elroconnects:smokealarm:myhub:1:smokealarm' triggered
+    Channel 'elroconnects:smokealarm:myhub:1:smokeAlarm' triggered
 then
     logInfo("Smoke alarm living room")
     ...

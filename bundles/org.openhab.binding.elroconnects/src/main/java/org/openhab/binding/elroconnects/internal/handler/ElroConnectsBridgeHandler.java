@@ -92,6 +92,9 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     // Command filter when syncing devices and scenes, other values would filter what gets received
     private static final String SYNC_COMMAND = "0002";
 
+    // Regex for valid connectorId
+    private static final Pattern CONNECTOR_ID_PATTERN = Pattern.compile("^ST_([0-9a-f]){12}$");
+
     // Message string for acknowledging receipt of data
     private static final String ACK_STRING = "{\"answer\": \"APP_answer_OK\"}";
     private static final byte[] ACK = ACK_STRING.getBytes(StandardCharsets.UTF_8);
@@ -110,6 +113,8 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     // Used for getting IP address and keep connection alive messages
     private static final String QUERY_BASE_STRING = "IOT_KEY?";
     private volatile String queryString = QUERY_BASE_STRING + connectorId;
+    // Regex to retrieve ctrlKey from response on IP address message
+    private static final Pattern CTRL_KEY_PATTERN = Pattern.compile("KEY:([0-9a-f]*)");
 
     private int refreshInterval = 60;
     private volatile @Nullable InetAddress addr;
@@ -146,11 +151,15 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     @Override
     public void initialize() {
         ElroConnectsBridgeConfiguration config = getConfigAs(ElroConnectsBridgeConfiguration.class);
-
         connectorId = config.connectorId;
         refreshInterval = config.refreshInterval;
+
         if (connectorId.isEmpty()) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
+            return;
+        } else if (!CONNECTOR_ID_PATTERN.matcher(connectorId).matches()) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    "Device ID not of format ST_xxxxxxxxxxxx with xxxxxxxxxxxx the lowercase MAC address of the connector");
             return;
         }
 
@@ -174,14 +183,12 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
         try {
             addr = getAddr();
         } catch (IOException e) {
-            logger.warn("Communication error when finding IP address.");
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     "Error trying to find IP address for connector ID " + connectorId + ".");
             stopCommunication();
             return;
         }
         if (addr == null) {
-            logger.warn("No IP address for connector found.");
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     "Error trying to find IP address for connector ID " + connectorId + ".");
             stopCommunication();
@@ -190,7 +197,6 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
 
         String ctrlKey = this.ctrlKey;
         if (ctrlKey.isEmpty()) {
-            logger.warn("Error initializing communication, no key received.");
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     "Communication data error while starting communication.");
             stopCommunication();
@@ -202,7 +208,6 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
             socket = createSocket(false);
             this.socket = socket;
         } catch (IOException e) {
-            logger.warn("Error initializing communication, could not create socket.");
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                     "Socket error while starting communication.");
             stopCommunication();
@@ -250,7 +255,7 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private @Nullable InetAddress getAddr() throws IOException {
         try (DatagramSocket socket = createSocket(true)) {
             String response = sendAndReceive(socket, queryString, true);
-            Matcher keyMatcher = Pattern.compile("KEY:([0-9a-f]*)").matcher(response);
+            Matcher keyMatcher = CTRL_KEY_PATTERN.matcher(response);
             ctrlKey = keyMatcher.find() ? keyMatcher.group(1) : "";
             logger.debug("Key: {}", ctrlKey);
 
@@ -596,7 +601,12 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
                 ? InetAddress.getByName(networkAddressService.getConfiguredBroadcastAddress())
                 : addr;
         if (address == null) {
-            logger.debug("No address specified, cannot send");
+            if (broadcast) {
+                logger.warn("No broadcast address, check network configuration");
+            } else {
+                logger.debug("Failed sending, hub address was not found");
+            }
+            restartCommunication();
             return;
         }
         logger.debug("Send: {}", query);
@@ -614,18 +624,22 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     }
 
     /**
-     * Basic method to send an {@link ElroConnectsMessage} on an open socket with the K1 hub.
+     * Basic method to send an {@link ElroConnectsMessage} to the K1 hub.
      *
-     * @param socket
      * @param elroMessage
      * @param waitResponse true if no new messages should be allowed to be sent before receiving the full response
      * @throws IOException
      */
-    private synchronized void sendElroMessage(DatagramSocket socket, ElroConnectsMessage elroMessage,
-            boolean waitResponse) throws IOException {
-        String message = gsonOut.toJson(elroMessage);
-        awaitResponse(waitResponse);
-        send(socket, message, false);
+    private synchronized void sendElroMessage(ElroConnectsMessage elroMessage, boolean waitResponse)
+            throws IOException {
+        DatagramSocket socket = this.socket;
+        if (socket != null) {
+            String message = gsonOut.toJson(elroMessage);
+            awaitResponse(waitResponse);
+            send(socket, message, false);
+        } else {
+            throw new IOException("No socket");
+        }
     }
 
     /**
@@ -639,17 +653,10 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     public void deviceControl(int deviceId, String deviceCommand) throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Device control {}, status {}", deviceId, deviceCommand);
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_DEVICE_CONTROL).withDeviceId(ElroConnectsUtil.encode(deviceId))
-                            .withDeviceStatus(deviceCommand);
-            sendElroMessage(socket, elroMessage, false);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Device control {}, status {}", deviceId, deviceCommand);
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_DEVICE_CONTROL).withDeviceId(ElroConnectsUtil.encode(deviceId)).withDeviceStatus(deviceCommand);
+        sendElroMessage(elroMessage, false);
     }
 
     /**
@@ -660,16 +667,10 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private void getDeviceNames() throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Get device names");
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_GET_DEVICE_NAME).withDeviceId(0);
-            sendElroMessage(socket, elroMessage, true);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Get device names");
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_GET_DEVICE_NAME).withDeviceId(0);
+        sendElroMessage(elroMessage, true);
     }
 
     /**
@@ -680,16 +681,10 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private void getDeviceStatuses() throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Get all equipment status");
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_GET_DEVICE_STATUSES);
-            sendElroMessage(socket, elroMessage, true);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Get all equipment status");
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_GET_DEVICE_STATUSES);
+        sendElroMessage(elroMessage, true);
     }
 
     /**
@@ -700,16 +695,10 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private void syncDevices() throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Sync device status");
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_SYNC_DEVICES).withDeviceStatus(SYNC_COMMAND);
-            sendElroMessage(socket, elroMessage, true);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Sync device status");
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_SYNC_DEVICES).withDeviceStatus(SYNC_COMMAND);
+        sendElroMessage(elroMessage, true);
     }
 
     /**
@@ -720,16 +709,10 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private void getCurrentScene() throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Get current scene");
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_GET_SCENE);
-            sendElroMessage(socket, elroMessage, true);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Get current scene");
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_GET_SCENE);
+        sendElroMessage(elroMessage, true);
     }
 
     /**
@@ -740,16 +723,10 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private void selectScene(int scene) throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Select scene {}", scene);
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_SELECT_SCENE).withSceneType(ElroConnectsUtil.encode(scene));
-            sendElroMessage(socket, elroMessage, false);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Select scene {}", scene);
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_SELECT_SCENE).withSceneType(ElroConnectsUtil.encode(scene));
+        sendElroMessage(elroMessage, false);
     }
 
     /**
@@ -760,17 +737,11 @@ public class ElroConnectsBridgeHandler extends BaseBridgeHandler {
     private void syncScenes() throws IOException {
         String connectorId = this.connectorId;
         String ctrlKey = this.ctrlKey;
-        DatagramSocket socket = this.socket;
-        if (!connectorId.isEmpty() && !ctrlKey.isEmpty() && (socket != null)) {
-            logger.debug("Sync scenes");
-            ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
-                    ELRO_SYNC_SCENES).withSceneGroup(ElroConnectsUtil.encode(0)).withSceneContent(SYNC_COMMAND)
-                            .withAnswerContent(SYNC_COMMAND);
-            sendElroMessage(socket, elroMessage, true);
-        } else {
-            // This should not happen if properly initialized
-            logger.debug("Could not send");
-        }
+        logger.debug("Sync scenes");
+        ElroConnectsMessage elroMessage = new ElroConnectsMessage(msgIdIncrement(), connectorId, ctrlKey,
+                ELRO_SYNC_SCENES).withSceneGroup(ElroConnectsUtil.encode(0)).withSceneContent(SYNC_COMMAND)
+                        .withAnswerContent(SYNC_COMMAND);
+        sendElroMessage(elroMessage, true);
     }
 
     @Override

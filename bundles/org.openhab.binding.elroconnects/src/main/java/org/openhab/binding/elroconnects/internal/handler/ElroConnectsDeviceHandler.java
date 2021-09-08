@@ -37,7 +37,7 @@ import org.openhab.core.types.State;
 @NonNullByDefault
 public class ElroConnectsDeviceHandler extends BaseThingHandler {
 
-    protected @Nullable Integer deviceId;
+    protected int deviceId;
 
     public ElroConnectsDeviceHandler(Thing thing) {
         super(thing);
@@ -46,17 +46,12 @@ public class ElroConnectsDeviceHandler extends BaseThingHandler {
     @Override
     public void initialize() {
         ElroConnectsDeviceConfiguration config = getConfigAs(ElroConnectsDeviceConfiguration.class);
-        Integer id = config.deviceId;
-        deviceId = id;
+        deviceId = config.deviceId;
 
-        if (id == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
-            return;
-        }
         ElroConnectsBridgeHandler bridgeHandler = getBridgeHandler();
 
         if (bridgeHandler != null) {
-            bridgeHandler.setDeviceHandler(id, this);
+            bridgeHandler.setDeviceHandler(deviceId, this);
             updateProperties(bridgeHandler);
             refreshChannels(bridgeHandler);
         }
@@ -64,15 +59,10 @@ public class ElroConnectsDeviceHandler extends BaseThingHandler {
 
     @Override
     public void dispose() {
-        Integer id = deviceId;
-        if (id == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
-            return;
-        }
         ElroConnectsBridgeHandler bridgeHandler = getBridgeHandler();
 
         if (bridgeHandler != null) {
-            bridgeHandler.unsetDeviceHandler(id, this);
+            bridgeHandler.unsetDeviceHandler(deviceId, this);
         }
     }
 
@@ -101,11 +91,6 @@ public class ElroConnectsDeviceHandler extends BaseThingHandler {
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        Integer id = deviceId;
-        if (id == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
-            return;
-        }
         ElroConnectsBridgeHandler bridgeHandler = getBridgeHandler();
         if (bridgeHandler != null) {
             if (command instanceof RefreshType) {
@@ -120,12 +105,7 @@ public class ElroConnectsDeviceHandler extends BaseThingHandler {
      * @param bridgeHandler
      */
     protected void updateProperties(ElroConnectsBridgeHandler bridgeHandler) {
-        Integer id = deviceId;
-        if (id == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
-            return;
-        }
-        ElroConnectsDevice device = bridgeHandler.getDevice(id);
+        ElroConnectsDevice device = bridgeHandler.getDevice(deviceId);
         if (device != null) {
             Map<String, String> properties = new HashMap<>();
             properties.put("deviceType", ElroConnectsUtil.stringOrEmpty(device.getDeviceType()));
@@ -139,12 +119,7 @@ public class ElroConnectsDeviceHandler extends BaseThingHandler {
      * @param bridgeHandler
      */
     protected void refreshChannels(ElroConnectsBridgeHandler bridgeHandler) {
-        Integer id = deviceId;
-        if (id == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
-            return;
-        }
-        ElroConnectsDevice device = bridgeHandler.getDevice(id);
+        ElroConnectsDevice device = bridgeHandler.getDevice(deviceId);
         if (device != null) {
             device.updateState();
         }

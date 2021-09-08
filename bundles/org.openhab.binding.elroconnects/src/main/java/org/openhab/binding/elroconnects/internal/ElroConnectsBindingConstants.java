@@ -60,24 +60,24 @@ public class ElroConnectsBindingConstants {
     public static final String SCENE = "scene";
 
     public static final String BATTERY_LEVEL = "battery";
-    public static final String LOW_BATTERY = "lowbattery";
-    public static final String MUTE_ALARM = "mutealarm";
-    public static final String TEST_ALARM = "testalarm";
+    public static final String LOW_BATTERY = "lowBattery";
+    public static final String MUTE_ALARM = "muteAlarm";
+    public static final String TEST_ALARM = "testAlarm";
 
     public static final String ENTRY = "entry";
     public static final String MOTION = "motion";
 
-    public static final String POWER_STATE = "powerstate";
+    public static final String POWER_STATE = "powerState";
 
     public static final String TEMPERATURE = "temperature";
     public static final String HUMIDITY = "humidity";
 
-    public static final String SMOKE_ALARM = "smokealarm";
-    public static final String CO_ALARM = "coalarm";
-    public static final String HEAT_ALARM = "heatalarm";
-    public static final String WATER_ALARM = "wateralarm";
-    public static final String ENTRY_ALARM = "entryalarm";
-    public static final String MOTION_ALARM = "motionalarm";
+    public static final String SMOKE_ALARM = "smokeAlarm";
+    public static final String CO_ALARM = "coAlarm";
+    public static final String HEAT_ALARM = "heatAlarm";
+    public static final String WATER_ALARM = "waterAlarm";
+    public static final String ENTRY_ALARM = "entryAlarm";
+    public static final String MOTION_ALARM = "motionAlarm";
 
     // Config properties
     public static final String CONFIG_CONNECTOR_ID = "connectorId";
