@@ -32,7 +32,6 @@ import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.binding.BaseThingHandlerFactory;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerFactory;
-import org.openhab.core.thing.type.DynamicStateDescriptionProvider;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -91,11 +90,13 @@ public class ElroConnectsHandlerFactory extends BaseThingHandlerFactory {
     }
 
     @Reference
-    protected void setDynamicStateDescriptionProvider(DynamicStateDescriptionProvider dynamicStateDescriptionProver) {
-        this.dynamicStateDescriptionProvider = (ElroConnectsDynamicStateDescriptionProvider) dynamicStateDescriptionProver;
+    protected void setDynamicStateDescriptionProvider(
+            ElroConnectsDynamicStateDescriptionProvider dynamicStateDescriptionProver) {
+        this.dynamicStateDescriptionProvider = dynamicStateDescriptionProver;
     }
 
-    protected void unsetDynamicStateDescriptionProvider(DynamicStateDescriptionProvider dynamicStateDescriptionProver) {
+    protected void unsetDynamicStateDescriptionProvider(
+            ElroConnectsDynamicStateDescriptionProvider dynamicStateDescriptionProver) {
         this.dynamicStateDescriptionProvider = null;
     }
 }

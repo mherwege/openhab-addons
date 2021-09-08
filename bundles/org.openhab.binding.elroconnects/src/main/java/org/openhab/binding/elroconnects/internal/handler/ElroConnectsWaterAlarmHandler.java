@@ -19,8 +19,6 @@ import org.openhab.binding.elroconnects.internal.devices.ElroConnectsDevice;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
-import org.openhab.core.thing.ThingStatus;
-import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.types.Command;
 
 /**
@@ -38,10 +36,6 @@ public class ElroConnectsWaterAlarmHandler extends ElroConnectsDeviceHandler {
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
         Integer id = deviceId;
-        if (id == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Device ID not set");
-            return;
-        }
         ElroConnectsBridgeHandler bridgeHandler = getBridgeHandler();
         if (bridgeHandler != null) {
             ElroConnectsDevice device = bridgeHandler.getDevice(id);
