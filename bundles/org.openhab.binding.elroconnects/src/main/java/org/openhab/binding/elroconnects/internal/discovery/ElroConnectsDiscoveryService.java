@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link ElroConnectsDiscoveryService} discovers devices connected to the Elro Connects K1 Controller.
+ * The {@link ElroConnectsDiscoveryService} discovers devices connected to the ELRO Connects K1 Controller.
  *
  * @author Mark Herwege - Initial contribution
  */

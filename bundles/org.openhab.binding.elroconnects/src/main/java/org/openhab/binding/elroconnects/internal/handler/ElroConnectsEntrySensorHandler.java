@@ -18,7 +18,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.openhab.core.thing.Thing;
 
 /**
- * The {@link ElroConnectsEntrySensorHandler} represents the thing handler for an Elro Connects entry sensor device.
+ * The {@link ElroConnectsEntrySensorHandler} represents the thing handler for an ELRO Connects entry sensor device.
  *
  * @author Mark Herwege - Initial contribution
  */

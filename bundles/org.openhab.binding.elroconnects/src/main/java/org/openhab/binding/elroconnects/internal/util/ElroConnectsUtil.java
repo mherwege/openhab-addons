@@ -16,7 +16,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 
 /**
- * The {@link ElroConnectsUtil} contains a few utility methods for the Elro Connects binding.
+ * The {@link ElroConnectsUtil} contains a few utility methods for the ELRO Connects binding.
  *
  * @author Mark Herwege - Initial contribution
  */

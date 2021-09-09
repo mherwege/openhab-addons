@@ -21,7 +21,7 @@ import org.openhab.binding.elroconnects.internal.handler.ElroConnectsBridgeHandl
 import org.openhab.binding.elroconnects.internal.handler.ElroConnectsDeviceHandler;
 
 /**
- * The {@link ElroConnectsDevice} is an abstract class representing all basic properties for Elro Connects devices.
+ * The {@link ElroConnectsDevice} is an abstract class representing all basic properties for ELRO Connects devices.
  * Concrete subclasses will contain specific logic for each device type.
  *
  * @author Mark Herwege - Initial contribution

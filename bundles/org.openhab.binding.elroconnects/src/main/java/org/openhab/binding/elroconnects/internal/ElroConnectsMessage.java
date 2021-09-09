@@ -19,7 +19,7 @@ import org.openhab.binding.elroconnects.internal.util.ElroConnectsUtil;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * The {@link ElroConnectsMessage} represents the JSON messages exchanged with the Elro Connects K1 Connector. This
+ * The {@link ElroConnectsMessage} represents the JSON messages exchanged with the ELRO Connects K1 Connector. This
  * class is used to serialize/deserialize the messages.
  *
  * @author Mark Herwege - Initial contribution
