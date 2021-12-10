@@ -31,6 +31,7 @@ import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
+import org.openhab.core.thing.ThingStatusInfo;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.UnDefType;
@@ -80,8 +81,6 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED,
                     "@text/offline.bridge-unitialized");
             return;
-        } else {
-            updateStatus(ThingStatus.UNKNOWN);
         }
 
         // We need to do this in a separate thread because we may have to wait for the
@@ -93,24 +92,23 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
                 return;
             }
 
-            NhcEnergyMeter nhcEnergyMeter = nhcComm.getEnergyMeters().get(energyMeterId);
-            if (nhcEnergyMeter == null) {
+            NhcEnergyMeter energyMeter = nhcComm.getEnergyMeters().get(energyMeterId);
+            if (energyMeter == null) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         "@text/offline.configuration-error.energyMeterId");
                 return;
             }
 
-            nhcEnergyMeter.setEventHandler(this);
+            energyMeter.setEventHandler(this);
 
-            updateProperties();
+            updateProperties(energyMeter);
 
-            // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item
-            // linked to the channel
-            if (isLinked(CHANNEL_POWER)) {
-                nhcComm.startEnergyMeter(energyMeterId);
+            String location = energyMeter.getLocation();
+            if (thing.getLocation() == null) {
+                thing.setLocation(location);
             }
 
-            this.nhcEnergyMeter = nhcEnergyMeter;
+            nhcEnergyMeter = energyMeter;
 
             logger.debug("energy meter intialized {}", energyMeterId);
 
@@ -120,25 +118,37 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
             } else {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             }
+
+            // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item
+            // linked to the channel
+            if (isLinked(CHANNEL_POWER)) {
+                nhcComm.startEnergyMeter(energyMeterId);
+            }
         });
     }
 
     @Override
     public void dispose() {
         NikoHomeControlCommunication nhcComm = getCommunication();
-
         if (nhcComm != null) {
             nhcComm.stopEnergyMeter(energyMeterId);
+            NhcEnergyMeter energyMeter = nhcComm.getEnergyMeters().get(energyMeterId);
+            if (energyMeter != null) {
+                energyMeter.unsetEventHandler();
+            }
         }
+        nhcEnergyMeter = null;
+        super.dispose();
     }
 
-    private void updateProperties() {
+    private void updateProperties(NhcEnergyMeter nhcEnergyMeter) {
         Map<String, String> properties = new HashMap<>();
 
         if (nhcEnergyMeter instanceof NhcEnergyMeter2) {
             NhcEnergyMeter2 energyMeter = (NhcEnergyMeter2) nhcEnergyMeter;
-            properties.put("model", energyMeter.getModel());
-            properties.put("technology", energyMeter.getTechnology());
+            properties.put("deviceType", energyMeter.getDeviceType());
+            properties.put("deviceTechnology", energyMeter.getDeviceTechnology());
+            properties.put("deviceModel", energyMeter.getDeviceModel());
         }
 
         thing.setProperties(properties);
@@ -212,7 +222,7 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
     private void restartCommunication(NikoHomeControlCommunication nhcComm) {
         // We lost connection but the connection object is there, so was correctly started.
         // Try to restart communication.
-        nhcComm.restartCommunication();
+        nhcComm.scheduleRestartCommunication();
         // If still not active, take thing offline and return.
         if (!nhcComm.communicationActive()) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
@@ -237,5 +247,17 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
     private @Nullable NikoHomeControlBridgeHandler getBridgeHandler() {
         Bridge nhcBridge = getBridge();
         return nhcBridge != null ? (NikoHomeControlBridgeHandler) nhcBridge.getHandler() : null;
+    }
+
+    @Override
+    public void bridgeStatusChanged(ThingStatusInfo statusInfo) {
+        ThingStatus status = statusInfo.getStatus();
+        if (ThingStatus.ONLINE.equals(status)) {
+            updateStatus(ThingStatus.ONLINE);
+        } else if (ThingStatus.OFFLINE.equals(status)) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
+        } else {
+            updateStatus(ThingStatus.UNKNOWN);
+        }
     }
 }

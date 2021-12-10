@@ -36,6 +36,7 @@ import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
+import org.openhab.core.thing.ThingStatusInfo;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.types.Command;
 import org.slf4j.Logger;
@@ -217,8 +218,6 @@ public class NikoHomeControlActionHandler extends BaseThingHandler implements Nh
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED,
                     "@text/offline.bridge-unitialized");
             return;
-        } else {
-            updateStatus(ThingStatus.UNKNOWN);
         }
 
         // We need to do this in a separate thread because we may have to wait for the communication to become active
@@ -229,25 +228,23 @@ public class NikoHomeControlActionHandler extends BaseThingHandler implements Nh
                 return;
             }
 
-            NhcAction nhcAction = nhcComm.getActions().get(actionId);
-            if (nhcAction == null) {
+            NhcAction action = nhcComm.getActions().get(actionId);
+            if (action == null) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                         "@text/offline.configuration-error.actionId");
                 return;
             }
 
-            nhcAction.setEventHandler(this);
+            action.setEventHandler(this);
 
-            updateProperties();
+            updateProperties(action);
 
-            String actionLocation = nhcAction.getLocation();
+            String actionLocation = action.getLocation();
             if (thing.getLocation() == null) {
                 thing.setLocation(actionLocation);
             }
 
-            actionEvent(nhcAction.getState());
-
-            this.nhcAction = nhcAction;
+            nhcAction = action;
 
             logger.debug("action initialized {}", actionId);
 
@@ -257,17 +254,27 @@ public class NikoHomeControlActionHandler extends BaseThingHandler implements Nh
             } else {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             }
+
+            actionEvent(action.getState());
         });
     }
 
-    private void updateProperties() {
-        NhcAction nhcAction = this.nhcAction;
-        if (nhcAction == null) {
-            logger.debug("action with ID {} not initialized", actionId);
-            return;
+    @Override
+    public void dispose() {
+        NikoHomeControlCommunication nhcComm = getCommunication();
+        if (nhcComm != null) {
+            NhcAction action = nhcComm.getActions().get(actionId);
+            if (action != null) {
+                action.unsetEventHandler();
+            }
         }
+        nhcAction = null;
+        super.dispose();
+    }
 
+    private void updateProperties(NhcAction nhcAction) {
         Map<String, String> properties = new HashMap<>();
+
         properties.put("type", String.valueOf(nhcAction.getType()));
         if (getThing().getThingTypeUID() == THING_TYPE_BLIND) {
             properties.put("timeToOpen", String.valueOf(nhcAction.getOpenTime()));
@@ -276,8 +283,9 @@ public class NikoHomeControlActionHandler extends BaseThingHandler implements Nh
 
         if (nhcAction instanceof NhcAction2) {
             NhcAction2 action = (NhcAction2) nhcAction;
-            properties.put("model", action.getModel());
-            properties.put("technology", action.getTechnology());
+            properties.put("deviceType", action.getDeviceType());
+            properties.put("deviceTechnology", action.getDeviceTechnology());
+            properties.put("deviceModel", action.getDeviceModel());
         }
 
         thing.setProperties(properties);
@@ -333,7 +341,7 @@ public class NikoHomeControlActionHandler extends BaseThingHandler implements Nh
     private void restartCommunication(NikoHomeControlCommunication nhcComm) {
         // We lost connection but the connection object is there, so was correctly started.
         // Try to restart communication.
-        nhcComm.restartCommunication();
+        nhcComm.scheduleRestartCommunication();
         // If still not active, take thing offline and return.
         if (!nhcComm.communicationActive()) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
@@ -358,5 +366,17 @@ public class NikoHomeControlActionHandler extends BaseThingHandler implements Nh
     private @Nullable NikoHomeControlBridgeHandler getBridgeHandler() {
         Bridge nhcBridge = getBridge();
         return nhcBridge != null ? (NikoHomeControlBridgeHandler) nhcBridge.getHandler() : null;
+    }
+
+    @Override
+    public void bridgeStatusChanged(ThingStatusInfo statusInfo) {
+        ThingStatus status = statusInfo.getStatus();
+        if (ThingStatus.ONLINE.equals(status)) {
+            updateStatus(ThingStatus.ONLINE);
+        } else if (ThingStatus.OFFLINE.equals(status)) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
+        } else {
+            updateStatus(ThingStatus.UNKNOWN);
+        }
     }
 }

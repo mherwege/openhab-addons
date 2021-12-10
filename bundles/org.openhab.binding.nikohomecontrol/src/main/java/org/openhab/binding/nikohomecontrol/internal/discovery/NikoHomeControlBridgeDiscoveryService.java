@@ -40,8 +40,8 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mark Herwege - Initial Contribution
  */
-@Component(service = DiscoveryService.class, configurationPid = "discovery.nikohomecontrol")
 @NonNullByDefault
+@Component(service = DiscoveryService.class, configurationPid = "discovery.nikohomecontrol")
 public class NikoHomeControlBridgeDiscoveryService extends AbstractDiscoveryService {
 
     private final Logger logger = LoggerFactory.getLogger(NikoHomeControlBridgeDiscoveryService.class);
@@ -50,11 +50,11 @@ public class NikoHomeControlBridgeDiscoveryService extends AbstractDiscoveryServ
 
     private @NonNullByDefault({}) NetworkAddressService networkAddressService;
 
-    private static final int TIMEOUT = 5;
-    private static final int REFRESH_INTERVAL = 60;
+    private static final int TIMEOUT_SECONDS = 5;
+    private static final int REFRESH_INTERVAL_SECONDS = 60;
 
     public NikoHomeControlBridgeDiscoveryService() {
-        super(NikoHomeControlBindingConstants.BRIDGE_THING_TYPES_UIDS, TIMEOUT);
+        super(NikoHomeControlBindingConstants.BRIDGE_THING_TYPES_UIDS, TIMEOUT_SECONDS);
         logger.debug("bridge discovery service started");
     }
 
@@ -115,10 +115,10 @@ public class NikoHomeControlBridgeDiscoveryService extends AbstractDiscoveryServ
 
     @Override
     protected void startBackgroundDiscovery() {
-        logger.debug("Start background bridge discovery");
+        logger.debug("Start bridge background discovery");
         ScheduledFuture<?> job = nhcDiscoveryJob;
         if (job == null || job.isCancelled()) {
-            nhcDiscoveryJob = scheduler.scheduleWithFixedDelay(this::discoverBridge, 0, REFRESH_INTERVAL,
+            nhcDiscoveryJob = scheduler.scheduleWithFixedDelay(this::discoverBridge, 0, REFRESH_INTERVAL_SECONDS,
                     TimeUnit.SECONDS);
         }
     }

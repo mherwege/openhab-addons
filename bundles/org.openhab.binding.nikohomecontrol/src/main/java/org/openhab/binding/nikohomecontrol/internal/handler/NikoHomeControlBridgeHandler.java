@@ -16,8 +16,11 @@ import static org.openhab.binding.nikohomecontrol.internal.NikoHomeControlBindin
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.ZoneId;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -27,11 +30,13 @@ import org.openhab.binding.nikohomecontrol.internal.discovery.NikoHomeControlDis
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcControllerEvent;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
 import org.openhab.core.config.core.Configuration;
+import org.openhab.core.i18n.TimeZoneProvider;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
+import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.types.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,10 +60,11 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
 
     private volatile @Nullable ScheduledFuture<?> refreshTimer;
 
-    protected volatile @Nullable NikoHomeControlDiscoveryService nhcDiscovery;
+    protected final TimeZoneProvider timeZoneProvider;
 
-    public NikoHomeControlBridgeHandler(Bridge nikoHomeControlBridge) {
+    public NikoHomeControlBridgeHandler(Bridge nikoHomeControlBridge, TimeZoneProvider timeZoneProvider) {
         super(nikoHomeControlBridge);
+        this.timeZoneProvider = timeZoneProvider;
     }
 
     @Override
@@ -77,10 +83,12 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
             return;
         }
 
-        updateStatus(ThingStatus.UNKNOWN);
-
         scheduler.submit(() -> {
             comm.startCommunication();
+
+            int refreshInterval = config.refresh;
+            setupRefreshTimer(refreshInterval);
+
             if (!comm.communicationActive()) {
                 bridgeOffline();
                 return;
@@ -89,23 +97,13 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
             updateProperties();
 
             updateStatus(ThingStatus.ONLINE);
-
-            int refreshInterval = config.refresh;
-            setupRefreshTimer(refreshInterval);
-
-            NikoHomeControlDiscoveryService discovery = nhcDiscovery;
-            if (discovery != null) {
-                discovery.discoverDevices();
-            } else {
-                logger.debug("cannot discover devices, discovery service not started");
-            }
         });
     }
 
     /**
      * Schedule future communication refresh.
      *
-     * @param interval_config Time before refresh in minutes.
+     * @param refreshInterval Time before refresh in minutes.
      */
     private void setupRefreshTimer(int refreshInterval) {
         ScheduledFuture<?> timer = refreshTimer;
@@ -162,11 +160,6 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
     @Override
     public void controllerOnline() {
         bridgeOnline();
-
-        int refreshInterval = config.refresh;
-        if (refreshTimer == null) {
-            setupRefreshTimer(refreshInterval);
-        }
     }
 
     /**
@@ -187,6 +180,7 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
             comm.stopCommunication();
         }
         nhcComm = null;
+        super.dispose();
     }
 
     @Override
@@ -220,15 +214,6 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
             int refreshInterval = config.refresh;
             setupRefreshTimer(refreshInterval);
         });
-    }
-
-    /**
-     * Set discovery service handler to be able to start discovery after bridge initialization.
-     *
-     * @param nhcDiscovery
-     */
-    public void setNhcDiscovery(@Nullable NikoHomeControlDiscoveryService nhcDiscovery) {
-        this.nhcDiscovery = nhcDiscovery;
     }
 
     @Override
@@ -275,7 +260,17 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
         return config.port;
     }
 
+    @Override
+    public ZoneId getTimeZone() {
+        return timeZoneProvider.getTimeZone();
+    }
+
     protected synchronized void setConfig() {
         config = getConfig().as(NikoHomeControlBridgeConfig.class);
+    }
+
+    @Override
+    public Collection<Class<? extends ThingHandlerService>> getServices() {
+        return Set.of(NikoHomeControlDiscoveryService.class);
     }
 }
