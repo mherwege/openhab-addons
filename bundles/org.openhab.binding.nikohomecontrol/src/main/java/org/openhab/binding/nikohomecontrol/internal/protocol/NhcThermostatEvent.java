@@ -24,7 +24,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  * @author Mark Herwege - Initial Contribution
  */
 @NonNullByDefault
-public interface NhcThermostatEvent {
+public interface NhcThermostatEvent extends NhcBaseEvent {
 
     /**
      * This method is called when thermostat event is received from the Niko Home Control controller.
@@ -36,16 +36,4 @@ public interface NhcThermostatEvent {
      * @param demand 0 if no demand, > 0 if heating, < 0 if cooling
      */
     public void thermostatEvent(int measured, int setpoint, int mode, int overrule, int demand);
-
-    /**
-     * Called to indicate the thermostat has been initialized.
-     *
-     */
-    public void thermostatInitialized();
-
-    /**
-     * Called to indicate the thermostat has been removed from the Niko Home Control controller.
-     *
-     */
-    public void thermostatRemoved();
 }
