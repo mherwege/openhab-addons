@@ -1,28 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<<<<<<< Upstream, based on origin/main
-<<<<<<< Upstream, based on origin/main
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-
-=======
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
->>>>>>> d402e66 Elro Connects inital commit.
-  <modelVersion>4.0.0</modelVersion>
-    
-  <parent>
-        
-    <groupId>org.openhab.addons</groupId>
-        
-    <artifactId>org.openhab.addons.reactor</artifactId>
-<<<<<<< Upstream, based on upstream/main
-    <version>3.3.0-SNAPSHOT</version>
-=======
-    <version>3.2.0-SNAPSHOT</version>
-=======
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
->>>>>>> 43ac694 Fix pom.xml
 
   <modelVersion>4.0.0</modelVersion>
 
