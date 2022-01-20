@@ -35,10 +35,11 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAction;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcControllerEvent;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NhcEnergyMeter;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeter;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcThermostat;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.ActionType;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.MeterType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcDevice2.NhcParameter;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcDevice2.NhcProperty;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcMessage2.NhcMessageParam;
@@ -431,16 +432,16 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             }
             thermostats.put(device.uuid, nhcThermostat);
         } else if ("centralmeter".equals(device.type) || "energyhome".equals(device.type)) {
-            NhcEnergyMeter nhcEnergyMeter = energyMeters.get(device.uuid);
-            if (nhcEnergyMeter != null) {
-                nhcEnergyMeter.setName(device.name);
-                nhcEnergyMeter.setLocation(location);
+            NhcMeter nhcMeter = meters.get(device.uuid);
+            if (nhcMeter != null) {
+                nhcMeter.setName(device.name);
+                nhcMeter.setLocation(location);
             } else {
                 logger.debug("adding energy meter device {} model {}, {}", device.uuid, device.model, device.name);
-                nhcEnergyMeter = new NhcEnergyMeter2(device.uuid, device.name, device.type, device.technology,
-                        device.model, location, this, scheduler);
+                nhcMeter = new NhcMeter2(device.uuid, device.name, MeterType.ENERGY_LIVE, device.type,
+                        device.technology, device.model, null, location, this, scheduler);
             }
-            energyMeters.put(device.uuid, nhcEnergyMeter);
+            meters.put(device.uuid, nhcMeter);
         } else {
             logger.debug("device type {} and model {} not supported for {}, {}", device.type, device.model, device.uuid,
                     device.name);
@@ -450,16 +451,16 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
     private void removeDevice(NhcDevice2 device) {
         NhcAction action = actions.get(device.uuid);
         NhcThermostat thermostat = thermostats.get(device.uuid);
-        NhcEnergyMeter energyMeter = energyMeters.get(device.uuid);
+        NhcMeter meter = meters.get(device.uuid);
         if (action != null) {
             action.actionRemoved();
             actions.remove(device.uuid);
         } else if (thermostat != null) {
             thermostat.thermostatRemoved();
             thermostats.remove(device.uuid);
-        } else if (energyMeter != null) {
-            energyMeter.energyMeterRemoved();
-            energyMeters.remove(device.uuid);
+        } else if (meter != null) {
+            meter.meterRemoved();
+            meters.remove(device.uuid);
         }
     }
 
@@ -472,14 +473,14 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
 
         NhcAction action = actions.get(device.uuid);
         NhcThermostat thermostat = thermostats.get(device.uuid);
-        NhcEnergyMeter energyMeter = energyMeters.get(device.uuid);
+        NhcMeter meter = meters.get(device.uuid);
 
         if (action != null) {
             updateActionState((NhcAction2) action, deviceProperties);
         } else if (thermostat != null) {
             updateThermostatState((NhcThermostat2) thermostat, deviceProperties);
-        } else if (energyMeter != null) {
-            updateEnergyMeterState((NhcEnergyMeter2) energyMeter, deviceProperties);
+        } else if (meter != null) {
+            updateMeterState((NhcMeter2) meter, deviceProperties);
         }
     }
 
@@ -597,12 +598,12 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         }
 
         logger.debug(
-                "Niko Home Control: setting thermostat {} with measured {}, setpoint {}, mode {}, overrule {}, overruletime {}, ecosave {}, demand {}",
+                "setting thermostat {} with measured {}, setpoint {}, mode {}, overrule {}, overruletime {}, ecosave {}, demand {}",
                 thermostat.getId(), measured, setpoint, mode, overrule, overruletime, ecosave, demand);
-        thermostat.updateState(measured, setpoint, mode, overrule, overruletime, ecosave, demand);
+        thermostat.setState(measured, setpoint, mode, overrule, overruletime, ecosave, demand);
     }
 
-    private void updateEnergyMeterState(NhcEnergyMeter2 energyMeter, List<NhcProperty> deviceProperties) {
+    private void updateMeterState(NhcMeter2 meter, List<NhcProperty> deviceProperties) {
         try {
             Optional<Integer> electricalPower = deviceProperties.stream().map(p -> p.electricalPower)
                     .map(s -> (!((s == null) || s.isEmpty())) ? Math.round(Float.parseFloat(s)) : null)
@@ -614,11 +615,11 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
                     .map(s -> (!((s == null) || s.isEmpty())) ? Math.round(Float.parseFloat(s)) : null)
                     .filter(Objects::nonNull).findFirst();
             int power = electricalPower.orElse(powerFromGrid.orElse(0) - powerToGrid.orElse(0));
-            logger.trace("setting energy meter {} power to {}", energyMeter.getId(), power);
-            energyMeter.setPower(power);
+            logger.trace("setting energy meter {} power to {}", meter.getId(), power);
+            meter.setPower(power);
         } catch (NumberFormatException e) {
-            logger.trace("wrong format  in energy meter {} power reading", energyMeter.getId());
-            energyMeter.setPower(null);
+            logger.trace("wrong format  in energy meter {} power reading", meter.getId());
+            meter.setPower(null);
         }
     }
 
@@ -770,7 +771,12 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
     }
 
     @Override
-    public void startEnergyMeter(String energyMeterId) {
+    public void executeMeter(String meterId) {
+        // Nothing to do, meter readings not supported in NHC II at this point in time
+    }
+
+    @Override
+    public void retriggerMeterLive(String meterId) {
         NhcMessage2 message = new NhcMessage2();
 
         message.method = "devices.control";
@@ -782,7 +788,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         NhcDevice2 device = new NhcDevice2();
         devices.add(device);
         param.devices = devices;
-        device.uuid = energyMeterId;
+        device.uuid = meterId;
         ArrayList<NhcProperty> deviceProperties = new ArrayList<>();
 
         NhcProperty reportInstantUsageProp = new NhcProperty();
@@ -793,27 +799,6 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         String topic = profile + "/control/devices/cmd";
         String gsonMessage = gson.toJson(message);
 
-        NhcEnergyMeter2 energyMeter = (NhcEnergyMeter2) energyMeters.get(energyMeterId);
-        if (energyMeter != null) {
-            energyMeter.startEnergyMeter(topic, gsonMessage);
-        }
-    }
-
-    @Override
-    public void stopEnergyMeter(String energyMeterId) {
-        NhcEnergyMeter2 energyMeter = (NhcEnergyMeter2) energyMeters.get(energyMeterId);
-        if (energyMeter != null) {
-            energyMeter.stopEnergyMeter();
-        }
-    }
-
-    /**
-     * Method called from the {@link NhcEnergyMeter2} object to send message to Niko Home Control.
-     *
-     * @param topic
-     * @param gsonMessage
-     */
-    public void executeEnergyMeter(String topic, String gsonMessage) {
         sendDeviceMessage(topic, gsonMessage);
     }
 

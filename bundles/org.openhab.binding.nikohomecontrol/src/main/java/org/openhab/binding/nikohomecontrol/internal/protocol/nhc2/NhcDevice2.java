@@ -97,7 +97,7 @@ class NhcDevice2 {
     static class NhcTrait {
         @Nullable
         String macAddress;
-        // fields for energyMeters metering
+        // fields for metering
         @Nullable
         String channel;
         @Nullable

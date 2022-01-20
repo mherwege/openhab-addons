@@ -75,7 +75,7 @@ public abstract class NhcThermostat {
      * @param ecosave
      * @param demand 0 if no demand, > 0 if heating, < 0 if cooling
      */
-    public void updateState(int measured, int setpoint, int mode, int overrule, int overruletime, int ecosave,
+    public void setState(int measured, int setpoint, int mode, int overrule, int overruletime, int ecosave,
             int demand) {
         setMeasured(measured);
         setSetpoint(setpoint);
@@ -85,7 +85,7 @@ public abstract class NhcThermostat {
         setEcosave(ecosave);
         setDemand(demand);
 
-        updateChannels();
+        updateState();
     }
 
     /**
@@ -100,7 +100,7 @@ public abstract class NhcThermostat {
         }
     }
 
-    private void updateChannels() {
+    protected void updateState() {
         NhcThermostatEvent handler = eventHandler;
         if (handler != null) {
             logger.debug("update channels for {}", id);

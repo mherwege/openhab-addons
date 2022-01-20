@@ -15,11 +15,12 @@ package org.openhab.binding.nikohomecontrol.internal.handler;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
- * {@link NikoHomeControlEnergyMeterConfig} is the config class for Niko Home Control Thermostats.
+ * {@link NikoHomeControlMeterConfig} is the config class for Niko Home Control Thermostats.
  *
  * @author Mark Herwege - Initial Contribution
  */
 @NonNullByDefault
-public class NikoHomeControlEnergyMeterConfig {
-    public String energyMeterId = "";
+public class NikoHomeControlMeterConfig {
+    public String meterId = "";
+    public int refresh = 10;
 }

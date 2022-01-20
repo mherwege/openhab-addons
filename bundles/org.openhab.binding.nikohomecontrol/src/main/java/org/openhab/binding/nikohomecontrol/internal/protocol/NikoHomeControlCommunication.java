@@ -46,7 +46,7 @@ public abstract class NikoHomeControlCommunication {
 
     protected final Map<String, NhcAction> actions = new ConcurrentHashMap<>();
     protected final Map<String, NhcThermostat> thermostats = new ConcurrentHashMap<>();
-    protected final Map<String, NhcEnergyMeter> energyMeters = new ConcurrentHashMap<>();
+    protected final Map<String, NhcMeter> meters = new ConcurrentHashMap<>();
 
     protected final NhcControllerEvent handler;
 
@@ -72,7 +72,7 @@ public abstract class NikoHomeControlCommunication {
      */
     public void stopCommunication() {
         stopScheduledRestart();
-
+        stopAllMeters();
         resetCommunication();
     }
 
@@ -81,28 +81,17 @@ public abstract class NikoHomeControlCommunication {
      */
     public abstract void resetCommunication();
 
-    protected void stopScheduledRestart() {
-        ScheduledFuture<?> future = scheduledRestart;
-        if (future != null) {
-            future.cancel(false);
-        }
-        scheduledRestart = null;
-        delay = 0;
-        attempt = 0;
-    }
-
     /**
      * Close and restart communication with Niko Home Control system.
      */
     public synchronized void restartCommunication() {
+        logger.debug("restarting communication");
+
         resetCommunication();
-
-        logger.debug("restart communication from thread {}", Thread.currentThread().getId());
-
         startCommunication();
     }
 
-    private void checkAndRestartCommunication() {
+    private synchronized void checkAndRestartCommunication() {
         restartCommunication();
 
         // Try again if it didn't succeed
@@ -128,6 +117,19 @@ public abstract class NikoHomeControlCommunication {
             attempt = 0;
             scheduledRestart = scheduler.schedule(this::checkAndRestartCommunication, 0, TimeUnit.SECONDS);
         }
+    }
+
+    /**
+     * Stop all scheduled restart attempts of the communication with the Niko Home Control system.
+     */
+    protected void stopScheduledRestart() {
+        ScheduledFuture<?> future = scheduledRestart;
+        if (future != null) {
+            future.cancel(false);
+        }
+        scheduledRestart = null;
+        delay = 0;
+        attempt = 0;
     }
 
     /**
@@ -166,12 +168,12 @@ public abstract class NikoHomeControlCommunication {
     }
 
     /**
-     * Return all energyMeters meters in the Niko Home Control Controller.
+     * Return all meters meters in the Niko Home Control Controller.
      *
-     * @return <code>Map&ltString, {@link NhcEnergyMeter}></code>
+     * @return <code>Map&ltString, {@link NhcMeter}></code>
      */
-    public Map<String, NhcEnergyMeter> getEnergyMeters() {
-        return energyMeters;
+    public Map<String, NhcMeter> getMeters() {
+        return meters;
     }
 
     /**
@@ -200,16 +202,67 @@ public abstract class NikoHomeControlCommunication {
     public abstract void executeThermostat(String thermostatId, int overruleTemp, int overruleTime);
 
     /**
-     * Start retrieving energy meter data from Niko Home Control.
-     *
+     * Query meter for energy, gas consumption or water production/consumption data. The query will update the total
+     * production/consumption and production/consumption from the start of the day through the meterReadingEvent
+     * callback in {@link NhcMeterEvent}.
      */
-    public void startEnergyMeter(String energyMeterId) {
+    public abstract void executeMeter(String meterId);
+
+    /**
+     * Start retrieving energy meter data from Niko Home Control. The method is used to regularly retrigger the
+     * information flow. It can be left empty in concrete classes if the power data is flowing continuously.
+     */
+    public void startMeterLive(String meterId) {
+        NhcMeter meter = getMeters().get(meterId);
+        if (meter != null) {
+            meter.startMeterLive();
+        }
+    }
+
+    /**
+     * Retrigger retrieving energy meter data from Niko Home Control. This is used if the power data does not continue
+     * flowing automatically and needs to be retriggered at regular intervals.
+     */
+    public abstract void retriggerMeterLive(String meterId);
+
+    /**
+     * Stop retrieving energy meter data from Niko Home Control. This method can be used to stop a scheduled retrigger
+     * of the information flow, as scheduled in {{@link #startMeterLive(String)}.
+     */
+    public void stopMeterLive(String meterId) {
+        NhcMeter meter = getMeters().get(meterId);
+        if (meter != null) {
+            meter.stopMeterLive();
+        }
     };
 
     /**
-     * Stop retrieving energy meter data from Niko Home Control.
+     * Start retrieving meter data from Niko Home Control at a regular interval.
      *
+     * @param meterId
+     * @param refresh reading frequency
      */
-    public void stopEnergyMeter(String energyMeterId) {
-    };
+    public void startMeter(String meterId, int refresh) {
+        NhcMeter meter = getMeters().get(meterId);
+        if (meter != null) {
+            meter.startMeter(refresh);
+        }
+    }
+
+    /**
+     * Stop retrieving meter data from Niko Home Control at a regular interval.
+     */
+    public void stopMeter(String meterId) {
+        NhcMeter meter = getMeters().get(meterId);
+        if (meter != null) {
+            meter.stopMeter();
+        }
+    }
+
+    private void stopAllMeters() {
+        for (String meterId : getMeters().keySet()) {
+            stopMeter(meterId);
+            stopMeterLive(meterId);
+        }
+    }
 }

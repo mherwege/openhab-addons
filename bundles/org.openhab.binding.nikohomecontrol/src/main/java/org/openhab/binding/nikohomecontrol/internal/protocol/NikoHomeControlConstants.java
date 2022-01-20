@@ -31,6 +31,15 @@ public class NikoHomeControlConstants {
         GENERIC
     }
 
+    // Meter types abstracted from NhcI and NhcII meter types
+    public static enum MeterType {
+        ENERGY_LIVE,
+        ENERGY,
+        GAS,
+        WATER,
+        GENERIC
+    }
+
     // switch and dimmer constants in the Nhc layer
     public static final String NHCON = "On";
     public static final String NHCOFF = "Off";

@@ -12,19 +12,28 @@
  */
 package org.openhab.binding.nikohomecontrol.internal.handler;
 
-import static org.openhab.binding.nikohomecontrol.internal.NikoHomeControlBindingConstants.CHANNEL_POWER;
+import static org.openhab.binding.nikohomecontrol.internal.NikoHomeControlBindingConstants.*;
+import static org.openhab.core.library.unit.Units.KILOWATT_HOUR;
 import static org.openhab.core.types.RefreshType.REFRESH;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NhcEnergyMeter;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NhcEnergyMeterEvent;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeter;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeterEvent;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
-import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcEnergyMeter2;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.MeterType;
+import org.openhab.binding.nikohomecontrol.internal.protocol.nhc1.NhcMeter1;
+import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcMeter2;
+import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.QuantityType;
+import org.openhab.core.library.unit.SIUnits;
 import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ChannelUID;
@@ -39,42 +48,63 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link NikoHomeControlEnergyMeterHandler} is responsible for handling commands, which are
+ * The {@link NikoHomeControlMeterHandler} is responsible for handling commands, which are
  * sent to one of the channels.
  *
  * @author Mark Herwege - Initial Contribution
  */
 @NonNullByDefault
-public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implements NhcEnergyMeterEvent {
+public class NikoHomeControlMeterHandler extends BaseThingHandler implements NhcMeterEvent {
 
-    private final Logger logger = LoggerFactory.getLogger(NikoHomeControlEnergyMeterHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(NikoHomeControlMeterHandler.class);
 
-    private volatile @Nullable NhcEnergyMeter nhcEnergyMeter;
+    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
 
-    private String energyMeterId = "";
+    private volatile @Nullable NhcMeter nhcMeter;
 
-    public NikoHomeControlEnergyMeterHandler(Thing thing) {
+    private String meterId = "";
+
+    public NikoHomeControlMeterHandler(Thing thing) {
         super(thing);
     }
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
-        NhcEnergyMeter nhcEnergyMeter = this.nhcEnergyMeter;
-        if (nhcEnergyMeter == null) {
-            logger.debug("energy meter with ID {} not initialized", energyMeterId);
+        NhcMeter nhcMeter = this.nhcMeter;
+        if (nhcMeter == null) {
+            logger.debug("meter with ID {} not initialized", meterId);
             return;
         }
 
         if (REFRESH.equals(command)) {
-            energyMeterEvent(nhcEnergyMeter.getPower());
+            switch (channelUID.getId()) {
+                case CHANNEL_POWER:
+                    meterPowerEvent(nhcMeter.getPower());
+                    break;
+                case CHANNEL_ENERGY:
+                case CHANNEL_GAS:
+                case CHANNEL_WATER:
+                case CHANNEL_ENERGY_DAY:
+                case CHANNEL_GAS_DAY:
+                case CHANNEL_WATER_DAY:
+                case CHANNEL_ENERGY_LAST:
+                case CHANNEL_GAS_LAST:
+                case CHANNEL_WATER_LAST:
+                    LocalDateTime lastReadingUTC = nhcMeter.getLastReading();
+                    if (lastReadingUTC != null) {
+                        meterReadingEvent(nhcMeter.getReading(), nhcMeter.getDayReading(), lastReadingUTC);
+                    }
+                    break;
+                default:
+                    logger.debug("unexpected command for channel {}", channelUID.getId());
+            }
         }
     }
 
     @Override
     public void initialize() {
-        NikoHomeControlEnergyMeterConfig config = getConfig().as(NikoHomeControlEnergyMeterConfig.class);
-
-        energyMeterId = config.energyMeterId;
+        NikoHomeControlMeterConfig config = getConfig().as(NikoHomeControlMeterConfig.class);
+        meterId = config.meterId;
 
         NikoHomeControlCommunication nhcComm = getCommunication();
         if (nhcComm == null) {
@@ -92,25 +122,25 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
                 return;
             }
 
-            NhcEnergyMeter energyMeter = nhcComm.getEnergyMeters().get(energyMeterId);
-            if (energyMeter == null) {
+            NhcMeter meter = nhcComm.getMeters().get(meterId);
+            if (meter == null) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        "@text/offline.configuration-error.energyMeterId");
+                        "@text/offline.configuration-error.meterId");
                 return;
             }
 
-            energyMeter.setEventHandler(this);
+            meter.setEventHandler(this);
 
-            updateProperties(energyMeter);
+            updateProperties(meter);
 
-            String location = energyMeter.getLocation();
+            String location = meter.getLocation();
             if (thing.getLocation() == null) {
                 thing.setLocation(location);
             }
 
-            nhcEnergyMeter = energyMeter;
+            nhcMeter = meter;
 
-            logger.debug("energy meter intialized {}", energyMeterId);
+            logger.debug("meter intialized {}", meterId);
 
             Bridge bridge = getBridge();
             if ((bridge != null) && (bridge.getStatus() == ThingStatus.ONLINE)) {
@@ -119,10 +149,11 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             }
 
+            nhcComm.startMeter(meterId, config.refresh);
             // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item
             // linked to the channel
             if (isLinked(CHANNEL_POWER)) {
-                nhcComm.startEnergyMeter(energyMeterId);
+                nhcComm.startMeterLive(meterId);
             }
         });
     }
@@ -131,31 +162,51 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
     public void dispose() {
         NikoHomeControlCommunication nhcComm = getCommunication();
         if (nhcComm != null) {
-            nhcComm.stopEnergyMeter(energyMeterId);
-            NhcEnergyMeter energyMeter = nhcComm.getEnergyMeters().get(energyMeterId);
-            if (energyMeter != null) {
-                energyMeter.unsetEventHandler();
+            nhcComm.stopMeterLive(meterId);
+            nhcComm.stopMeter(meterId);
+            NhcMeter meter = nhcComm.getMeters().get(meterId);
+            if (meter != null) {
+                meter.unsetEventHandler();
             }
         }
-        nhcEnergyMeter = null;
+        nhcMeter = null;
         super.dispose();
     }
 
-    private void updateProperties(NhcEnergyMeter nhcEnergyMeter) {
+    private void updateProperties(NhcMeter nhcMeter) {
         Map<String, String> properties = new HashMap<>();
 
-        if (nhcEnergyMeter instanceof NhcEnergyMeter2) {
-            NhcEnergyMeter2 energyMeter = (NhcEnergyMeter2) nhcEnergyMeter;
-            properties.put("deviceType", energyMeter.getDeviceType());
-            properties.put("deviceTechnology", energyMeter.getDeviceTechnology());
-            properties.put("deviceModel", energyMeter.getDeviceModel());
+        if (nhcMeter instanceof NhcMeter1) {
+            NhcMeter1 meter = (NhcMeter1) nhcMeter;
+            properties.put("type", meter.getMeterType());
+            LocalDateTime referenceDate = meter.getReferenceDate();
+            if (referenceDate != null) {
+                properties.put("startdateUTC", referenceDate.format(DATE_TIME_FORMAT));
+            }
+        } else if (nhcMeter instanceof NhcMeter2) {
+            NhcMeter2 meter = (NhcMeter2) nhcMeter;
+            properties.put("deviceType", meter.getDeviceType());
+            properties.put("deviceTechnology", meter.getDeviceTechnology());
+            properties.put("deviceModel", meter.getDeviceModel());
         }
 
         thing.setProperties(properties);
     }
 
     @Override
-    public void energyMeterEvent(@Nullable Integer power) {
+    public void meterPowerEvent(@Nullable Integer power) {
+        NhcMeter nhcMeter = this.nhcMeter;
+        if (nhcMeter == null) {
+            logger.debug("meter with ID {} not initialized", meterId);
+            return;
+        }
+
+        MeterType meterType = nhcMeter.getType();
+        if (meterType != MeterType.ENERGY_LIVE) {
+            logger.debug("meter with ID {} does not support live readings", meterId);
+            return;
+        }
+
         if (power == null) {
             updateState(CHANNEL_POWER, UnDefType.UNDEF);
         } else {
@@ -165,7 +216,49 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
     }
 
     @Override
-    public void energyMeterInitialized() {
+    public void meterReadingEvent(double meterReading, double meterReadingDay, LocalDateTime lastReadingUTC) {
+        NhcMeter nhcMeter = this.nhcMeter;
+        if (nhcMeter == null) {
+            logger.debug("meter with ID {} not initialized", meterId);
+            return;
+        }
+
+        NikoHomeControlBridgeHandler bridgeHandler = getBridgeHandler();
+        if (bridgeHandler == null) {
+            logger.debug("Cannot update meter channels, no bridge handler");
+            return;
+        }
+        ZonedDateTime lastReading = lastReadingUTC.atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(bridgeHandler.getTimeZone());
+
+        MeterType meterType = nhcMeter.getType();
+        switch (meterType) {
+            case ENERGY_LIVE:
+            case ENERGY:
+                updateState(CHANNEL_ENERGY, new QuantityType<>(meterReading, KILOWATT_HOUR));
+                updateState(CHANNEL_ENERGY_DAY, new QuantityType<>(meterReadingDay, KILOWATT_HOUR));
+                updateState(CHANNEL_ENERGY_LAST, new DateTimeType(lastReading));
+                updateStatus(ThingStatus.ONLINE);
+            case GAS:
+                updateState(CHANNEL_GAS, new QuantityType<>(meterReading, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_GAS_DAY, new QuantityType<>(meterReadingDay, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_GAS_LAST, new DateTimeType(lastReading));
+                updateStatus(ThingStatus.ONLINE);
+                break;
+            case WATER:
+                updateState(CHANNEL_WATER, new QuantityType<>(meterReading, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_WATER_DAY, new QuantityType<>(meterReadingDay, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_WATER_LAST, new DateTimeType(lastReading));
+                updateStatus(ThingStatus.ONLINE);
+                break;
+            default:
+                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                        "@text/offline.configuration-error.meterType");
+        }
+    }
+
+    @Override
+    public void meterInitialized() {
         Bridge bridge = getBridge();
         if ((bridge != null) && (bridge.getStatus() == ThingStatus.ONLINE)) {
             updateStatus(ThingStatus.ONLINE);
@@ -173,15 +266,18 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
     }
 
     @Override
-    public void energyMeterRemoved() {
+    public void meterRemoved() {
         updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                "@text/offline.configuration-error.energyMeterRemoved");
+                "@text/offline.configuration-error.meterRemoved");
     }
 
     @Override
     // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item linked to
     // the channel
     public void channelLinked(ChannelUID channelUID) {
+        if (!CHANNEL_POWER.equals(channelUID.getId())) {
+            return;
+        }
         NikoHomeControlCommunication nhcComm = getCommunication();
         if (nhcComm != null) {
             // This can be expensive, therefore do it in a job.
@@ -191,7 +287,7 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
                 }
 
                 if (nhcComm.communicationActive()) {
-                    nhcComm.startEnergyMeter(energyMeterId);
+                    nhcComm.startMeterLive(meterId);
                     updateStatus(ThingStatus.ONLINE);
                 }
             });
@@ -200,6 +296,9 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
 
     @Override
     public void channelUnlinked(ChannelUID channelUID) {
+        if (!CHANNEL_POWER.equals(channelUID.getId())) {
+            return;
+        }
         NikoHomeControlCommunication nhcComm = getCommunication();
         if (nhcComm != null) {
             // This can be expensive, therefore do it in a job.
@@ -209,7 +308,7 @@ public class NikoHomeControlEnergyMeterHandler extends BaseThingHandler implemen
                 }
 
                 if (nhcComm.communicationActive()) {
-                    nhcComm.stopEnergyMeter(energyMeterId);
+                    nhcComm.stopMeterLive(meterId);
                     // as this is momentary power production/consumption, we set it UNDEF as we do not get readings
                     // anymore
                     updateState(CHANNEL_POWER, UnDefType.UNDEF);

@@ -220,6 +220,9 @@ public class NikoHomeControlThermostatHandler extends BaseThingHandler implement
             }
         }
         nhcThermostat = null;
+
+        cancelRefreshTimer();
+
         super.dispose();
     }
 

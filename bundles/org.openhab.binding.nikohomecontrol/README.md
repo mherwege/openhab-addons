@@ -1,5 +1,11 @@
 # Niko Home Control Binding
 
+**Notice for Niko Home Control II and Energy Meters**:
+Starting with openHAB 3.3, support for Energy Meters with Niko Home Control II has temporarily been disabled.
+This functionality caused heavy network traffic between your Niko Home Control II controller and the Niko cloud.
+If you are using this functionality in an older version of the binding, please disable it (remove the Energy Meter thing).
+As soon as Niko has adapted their side, this functionality will be restored.
+
 **Upgrade notice for Niko Home Control II and openHAB 2.5.3**:
 Starting with openHAB 2.5.3 the binding uses Niko Home Control hobby API token based authentication.
 The Niko Home Control hobby API is available with Niko Home Control system version 2.5.1 or newer.

@@ -231,7 +231,7 @@ public class NikoHomeControlBridgeHandler2 extends NikoHomeControlBridgeHandler 
     }
 
     @Override
-    protected synchronized void setConfig() {
+    protected void setConfig() {
         config = getConfig().as(NikoHomeControlBridgeConfig2.class);
     }
 }

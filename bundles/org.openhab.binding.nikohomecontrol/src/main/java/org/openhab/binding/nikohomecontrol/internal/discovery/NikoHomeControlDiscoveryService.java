@@ -23,7 +23,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.handler.NikoHomeControlBridgeHandler;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAction;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NhcEnergyMeter;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeter;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcThermostat;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
@@ -122,13 +122,33 @@ public class NikoHomeControlDiscoveryService extends AbstractDiscoveryService im
                     thermostatId, thingName, thingLocation);
         });
 
-        Map<String, NhcEnergyMeter> energyMeters = nhcComm.getEnergyMeters();
+        Map<String, NhcMeter> meters = nhcComm.getMeters();
 
-        energyMeters.forEach((energyMeterId, nhcEnergyMeter) -> {
-            String thingName = nhcEnergyMeter.getName();
-            String thingLocation = nhcEnergyMeter.getLocation();
-            addEnergyMeterDevice(new ThingUID(THING_TYPE_ENERGYMETER, bridgeHandler.getThing().getUID(), energyMeterId),
-                    energyMeterId, thingName, thingLocation);
+        meters.forEach((meterId, nhcMeter) -> {
+            String thingName = nhcMeter.getName();
+            String thingLocation = nhcMeter.getLocation();
+
+            switch (nhcMeter.getType()) {
+                case ENERGY_LIVE:
+                    addMeterDevice(
+                            new ThingUID(THING_TYPE_ENERGYMETER_LIVE, bridgeHandler.getThing().getUID(), meterId),
+                            meterId, thingName, thingLocation);
+                    break;
+                case ENERGY:
+                    addMeterDevice(new ThingUID(THING_TYPE_ENERGYMETER, bridgeHandler.getThing().getUID(), meterId),
+                            meterId, thingName, thingLocation);
+                    break;
+                case GAS:
+                    addMeterDevice(new ThingUID(THING_TYPE_GASMETER, bridgeHandler.getThing().getUID(), meterId),
+                            meterId, thingName, thingLocation);
+                    break;
+                case WATER:
+                    addMeterDevice(new ThingUID(THING_TYPE_WATERMETER, bridgeHandler.getThing().getUID(), meterId),
+                            meterId, thingName, thingLocation);
+                    break;
+                default:
+                    logger.debug("unrecognized meter type {} for {} {}", nhcMeter.getType(), meterId, thingName);
+            }
         });
     }
 
@@ -153,11 +173,10 @@ public class NikoHomeControlDiscoveryService extends AbstractDiscoveryService im
         thingDiscovered(discoveryResultBuilder.build());
     }
 
-    private void addEnergyMeterDevice(ThingUID uid, String energyMeterId, String thingName,
-            @Nullable String thingLocation) {
+    private void addMeterDevice(ThingUID uid, String meterId, String thingName, @Nullable String thingLocation) {
         DiscoveryResultBuilder discoveryResultBuilder = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID)
-                .withLabel(thingName).withProperty(CONFIG_ENERGYMETER_ID, energyMeterId)
-                .withRepresentationProperty(CONFIG_ENERGYMETER_ID);
+                .withLabel(thingName).withProperty(CONFIG_METER_ID, meterId)
+                .withRepresentationProperty(CONFIG_METER_ID);
         if (thingLocation != null) {
             discoveryResultBuilder.withProperty("Location", thingLocation);
         }

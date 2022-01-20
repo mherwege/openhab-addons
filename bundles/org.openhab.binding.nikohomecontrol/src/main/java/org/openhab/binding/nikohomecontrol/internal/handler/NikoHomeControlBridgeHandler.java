@@ -265,7 +265,7 @@ public abstract class NikoHomeControlBridgeHandler extends BaseBridgeHandler imp
         return timeZoneProvider.getTimeZone();
     }
 
-    protected synchronized void setConfig() {
+    protected void setConfig() {
         config = getConfig().as(NikoHomeControlBridgeConfig.class);
     }
 
