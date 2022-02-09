@@ -95,7 +95,7 @@ public abstract class NhcThermostat {
         logger.debug("action removed {}, {}", id, name);
         NhcThermostatEvent eventHandler = this.eventHandler;
         if (eventHandler != null) {
-            eventHandler.thermostatRemoved();
+            eventHandler.deviceRemoved();
             unsetEventHandler();
         }
     }

@@ -33,6 +33,7 @@ import java.util.stream.IntStream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAccess;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAction;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcControllerEvent;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeter;
@@ -373,7 +374,18 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             location = parameters.stream().map(p -> p.locationName).filter(Objects::nonNull).findFirst().orElse(null);
         }
 
-        if ("action".equals(device.type) || "virtual".equals(device.type)) {
+        if ("accesscontrol".equals(device.model) || "bellbutton".equals(device.model)) {
+            NhcAccess nhcAccess = accessDevices.get(device.uuid);
+            if (nhcAccess != null) {
+                nhcAccess.setName(device.name);
+                nhcAccess.setLocation(location);
+            } else {
+                logger.debug("adding access device {} model {}, {}", device.uuid, device.model, device.name);
+                nhcAccess = new NhcAccess2(device.uuid, device.name, device.type, device.technology, device.model,
+                        location, this);
+            }
+            accessDevices.put(device.uuid, nhcAccess);
+        } else if ("action".equals(device.type) || "virtual".equals(device.type)) {
             ActionType actionType;
             switch (device.model) {
                 case "generic":
@@ -452,6 +464,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         NhcAction action = actions.get(device.uuid);
         NhcThermostat thermostat = thermostats.get(device.uuid);
         NhcMeter meter = meters.get(device.uuid);
+        NhcAccess accessDevice = accessDevices.get(device.uuid);
         if (action != null) {
             action.actionRemoved();
             actions.remove(device.uuid);
@@ -461,6 +474,9 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         } else if (meter != null) {
             meter.meterRemoved();
             meters.remove(device.uuid);
+        } else if (accessDevice != null) {
+            accessDevice.accessDeviceRemoved();
+            accessDevices.remove(device.uuid);
         }
     }
 
@@ -474,6 +490,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         NhcAction action = actions.get(device.uuid);
         NhcThermostat thermostat = thermostats.get(device.uuid);
         NhcMeter meter = meters.get(device.uuid);
+        NhcAccess accessDevice = accessDevices.get(device.uuid);
 
         if (action != null) {
             updateActionState((NhcAction2) action, deviceProperties);
@@ -481,6 +498,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             updateThermostatState((NhcThermostat2) thermostat, deviceProperties);
         } else if (meter != null) {
             updateMeterState((NhcMeter2) meter, deviceProperties);
+        } else if (accessDevice != null) {
+            updateAccessState((NhcAccess2) accessDevice, deviceProperties);
         }
     }
 
@@ -620,6 +639,33 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         } catch (NumberFormatException e) {
             logger.trace("wrong format  in energy meter {} power reading", meter.getId());
             meter.setPower(null);
+        }
+    }
+
+    private void updateAccessState(NhcAccess2 accessDevice, List<NhcProperty> deviceProperties) {
+        Optional<NhcProperty> basicStateProperty = deviceProperties.stream().filter(p -> (p.basicState != null))
+                .findFirst();
+        Optional<NhcProperty> doorLockProperty = deviceProperties.stream().filter(p -> (p.doorlock != null))
+                .findFirst();
+
+        if (basicStateProperty.isPresent()) {
+            String bellState = basicStateProperty.get().basicState;
+            boolean state = false;
+            if (NHCON.equals(bellState) || NHCTRUE.equals(bellState)) {
+                state = true;
+            }
+            accessDevice.updateBellState(state);
+            logger.debug("setting access device {} bell to {}", accessDevice.getId(), state);
+        }
+
+        if (doorLockProperty.isPresent()) {
+            String doorLockState = doorLockProperty.get().doorlock;
+            boolean state = false;
+            if (NHCCLOSED.equals(doorLockState)) {
+                state = true;
+            }
+            accessDevice.updateDoorLockState(state);
+            logger.debug("setting access device {} doorlock to {}", accessDevice.getId(), state);
         }
     }
 
@@ -799,6 +845,68 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         String topic = profile + "/control/devices/cmd";
         String gsonMessage = gson.toJson(message);
 
+        sendDeviceMessage(topic, gsonMessage);
+    }
+
+    @Override
+    public void executeAccessBell(String accessId) {
+        NhcMessage2 message = new NhcMessage2();
+
+        message.method = "devices.control";
+        ArrayList<NhcMessageParam> params = new ArrayList<>();
+        NhcMessageParam param = new NhcMessageParam();
+        params.add(param);
+        message.params = params;
+        ArrayList<NhcDevice2> devices = new ArrayList<>();
+        NhcDevice2 device = new NhcDevice2();
+        devices.add(device);
+        param.devices = devices;
+        device.uuid = accessId;
+        ArrayList<NhcProperty> deviceProperties = new ArrayList<>();
+        NhcProperty property = new NhcProperty();
+        deviceProperties.add(property);
+        device.properties = deviceProperties;
+
+        NhcAccess2 accessDevice = (NhcAccess2) accessDevices.get(accessId);
+        if (accessDevice == null) {
+            return;
+        }
+
+        property.basicState = NHCTRIGGERED;
+
+        String topic = profile + "/control/devices/cmd";
+        String gsonMessage = gson.toJson(message);
+        sendDeviceMessage(topic, gsonMessage);
+    }
+
+    @Override
+    public void executeAccessUnlock(String accessId) {
+        NhcMessage2 message = new NhcMessage2();
+
+        message.method = "devices.control";
+        ArrayList<NhcMessageParam> params = new ArrayList<>();
+        NhcMessageParam param = new NhcMessageParam();
+        params.add(param);
+        message.params = params;
+        ArrayList<NhcDevice2> devices = new ArrayList<>();
+        NhcDevice2 device = new NhcDevice2();
+        devices.add(device);
+        param.devices = devices;
+        device.uuid = accessId;
+        ArrayList<NhcProperty> deviceProperties = new ArrayList<>();
+        NhcProperty property = new NhcProperty();
+        deviceProperties.add(property);
+        device.properties = deviceProperties;
+
+        NhcAccess2 accessDevice = (NhcAccess2) accessDevices.get(accessId);
+        if (accessDevice == null) {
+            return;
+        }
+
+        property.doorlock = NHCOPEN;
+
+        String topic = profile + "/control/devices/cmd";
+        String gsonMessage = gson.toJson(message);
         sendDeviceMessage(topic, gsonMessage);
     }
 

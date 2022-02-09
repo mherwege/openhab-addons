@@ -50,6 +50,7 @@ public class NikoHomeControlBindingConstants {
     public static final ThingTypeUID THING_TYPE_ENERGYMETER = new ThingTypeUID(BINDING_ID, "energyMeter");
     public static final ThingTypeUID THING_TYPE_GASMETER = new ThingTypeUID(BINDING_ID, "gasMeter");
     public static final ThingTypeUID THING_TYPE_WATERMETER = new ThingTypeUID(BINDING_ID, "waterMeter");
+    public static final ThingTypeUID THING_TYPE_ACCESS = new ThingTypeUID(BINDING_ID, "access");
 
     // thing type sets
     public static final Set<ThingTypeUID> BRIDGE_THING_TYPES_UIDS = Collections
@@ -62,10 +63,13 @@ public class NikoHomeControlBindingConstants {
     public static final Set<ThingTypeUID> METER_THING_TYPES_UIDS = Collections.unmodifiableSet(
             Stream.of(THING_TYPE_ENERGYMETER_LIVE, THING_TYPE_ENERGYMETER, THING_TYPE_GASMETER, THING_TYPE_WATERMETER)
                     .collect(Collectors.toSet()));
+    public static final Set<ThingTypeUID> ACCESS_THING_TYPES_UIDS = Collections
+            .unmodifiableSet(Stream.of(THING_TYPE_ACCESS).collect(Collectors.toSet()));
     public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Stream
             .concat(BRIDGE_THING_TYPES_UIDS.stream(),
                     Stream.concat(ACTION_THING_TYPES_UIDS.stream(),
-                            Stream.concat(THERMOSTAT_THING_TYPES_UIDS.stream(), METER_THING_TYPES_UIDS.stream())))
+                            Stream.concat(THERMOSTAT_THING_TYPES_UIDS.stream(),
+                                    Stream.concat(METER_THING_TYPES_UIDS.stream(), ACCESS_THING_TYPES_UIDS.stream()))))
             .collect(Collectors.toSet());
 
     // List of all Channel ids
@@ -93,6 +97,9 @@ public class NikoHomeControlBindingConstants {
     public static final String CHANNEL_GAS_LAST = "gaslast";
     public static final String CHANNEL_WATER_LAST = "waterlast";
 
+    public static final String CHANNEL_BELL_BUTTON = "bellButton";
+    public static final String CHANNEL_LOCK = "lock";
+
     public static final String CHANNEL_ALARM = "alarm";
     public static final String CHANNEL_NOTICE = "notice";
 
@@ -106,10 +113,13 @@ public class NikoHomeControlBindingConstants {
     // Thing config properties
     public static final String CONFIG_ACTION_ID = "actionId";
     public static final String CONFIG_STEP_VALUE = "step";
+    public static final String CONFIG_INVERT = "invert";
 
     public static final String CONFIG_THERMOSTAT_ID = "thermostatId";
     public static final String CONFIG_OVERRULETIME = "overruleTime";
 
-    public static final String CONFIG_METER_ID = "meterId";
+    public static final String CONFIG_ENERGYMETER_ID = "energyMeterId";
     public static final String CONFIG_METER_REFRESH = "refresh";
+
+    public static final String CONFIG_ACCESS_ID = "accessId";
 }

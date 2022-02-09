@@ -197,7 +197,7 @@ public abstract class NhcAction {
         logger.debug("action removed {}, {}", id, name);
         NhcActionEvent eventHandler = this.eventHandler;
         if (eventHandler != null) {
-            eventHandler.actionRemoved();
+            eventHandler.deviceRemoved();
             unsetEventHandler();
         }
     }

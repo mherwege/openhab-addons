@@ -47,6 +47,7 @@ public abstract class NikoHomeControlCommunication {
     protected final Map<String, NhcAction> actions = new ConcurrentHashMap<>();
     protected final Map<String, NhcThermostat> thermostats = new ConcurrentHashMap<>();
     protected final Map<String, NhcMeter> meters = new ConcurrentHashMap<>();
+    protected final Map<String, NhcAccess> accessDevices = new ConcurrentHashMap<>();
 
     protected final NhcControllerEvent handler;
 
@@ -177,6 +178,15 @@ public abstract class NikoHomeControlCommunication {
     }
 
     /**
+     * Return all access devices in the Niko Home Control Controller.
+     *
+     * @return <code>Map&ltString, {@link NhcAccess}></code>
+     */
+    public Map<String, NhcAccess> getAccessDevices() {
+        return accessDevices;
+    }
+
+    /**
      * Execute an action command by sending it to Niko Home Control.
      *
      * @param actionId
@@ -264,5 +274,21 @@ public abstract class NikoHomeControlCommunication {
             stopMeter(meterId);
             stopMeterLive(meterId);
         }
+    }
+
+    /**
+     * Execute a bell command on an access control device by sending it to Niko Home Control.
+     *
+     * @param accessId
+     */
+    public void executeAccessBell(String accessId) {
+    }
+
+    /**
+     * Execute an unlock command on an access control device by sending it to Niko Home Control.
+     *
+     * @param accessId
+     */
+    public void executeAccessUnlock(String accessId) {
     }
 }

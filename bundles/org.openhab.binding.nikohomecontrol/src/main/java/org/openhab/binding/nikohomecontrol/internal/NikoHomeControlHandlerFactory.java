@@ -16,6 +16,7 @@ import static org.openhab.binding.nikohomecontrol.internal.NikoHomeControlBindin
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.nikohomecontrol.internal.handler.NikoHomeControlAccessHandler;
 import org.openhab.binding.nikohomecontrol.internal.handler.NikoHomeControlActionHandler;
 import org.openhab.binding.nikohomecontrol.internal.handler.NikoHomeControlBridgeHandler1;
 import org.openhab.binding.nikohomecontrol.internal.handler.NikoHomeControlBridgeHandler2;
@@ -65,6 +66,8 @@ public class NikoHomeControlHandlerFactory extends BaseThingHandlerFactory {
             return new NikoHomeControlThermostatHandler(thing);
         } else if (METER_THING_TYPES_UIDS.contains(thing.getThingTypeUID())) {
             return new NikoHomeControlMeterHandler(thing);
+        } else if (ACCESS_THING_TYPES_UIDS.contains(thing.getThingTypeUID())) {
+            return new NikoHomeControlAccessHandler(thing);
         }
 
         return null;
