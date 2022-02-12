@@ -589,11 +589,11 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         int measured = ambientTemperatureProperty.orElse(thermostat.getMeasured());
         int setpoint = setpointTemperatureProperty.orElse(thermostat.getSetpoint());
 
-        int overrule = thermostat.getOverrule();
-        int overruletime = thermostat.getRemainingOverruletime();
-        if (overruleActiveProperty.orElse(false)) {
-            overrule = overruleSetpointProperty.orElse(0);
-            overruletime = overruleTimeProperty.orElse(0);
+        int overrule = 0;
+        int overruletime = 0;
+        if (overruleActiveProperty.orElse(true)) {
+            overrule = overruleSetpointProperty.orElse(thermostat.getOverrule());
+            overruletime = overruleTimeProperty.orElse(thermostat.getRemainingOverruletime());
         }
 
         int ecosave = thermostat.getEcosave();
