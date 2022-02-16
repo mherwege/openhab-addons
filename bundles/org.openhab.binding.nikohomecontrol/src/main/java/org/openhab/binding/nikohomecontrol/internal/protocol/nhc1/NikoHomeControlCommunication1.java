@@ -299,6 +299,11 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
         String cmd;
         String event;
 
+        if (nhcMessage == null) {
+            logger.debug("empty message, nothing to interpret");
+            return;
+        }
+
         try {
             nhcMessageGson = gsonIn.fromJson(nhcMessage, NhcMessageBase1.class);
 
@@ -323,39 +328,57 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
             cmdResponseFuture = null;
         }
 
-        if ("systeminfo".equals(cmd)) {
-            cmdSystemInfo(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("startevents".equals(cmd)) {
-            cmdStartEvents(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("stoplive".equals(cmd)) {
-            cmdStopLive(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("getlive".equals(cmd)) {
-            cmdGetLive(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("listlocations".equals(cmd)) {
-            cmdListLocations(((NhcMessageListMap1) nhcMessageGson).getData());
-        } else if ("listactions".equals(cmd)) {
-            cmdListActions(((NhcMessageListMap1) nhcMessageGson).getData());
-        } else if (("listthermostat").equals(cmd)) {
-            cmdListThermostat(((NhcMessageListMap1) nhcMessageGson).getData());
-        } else if ("listenergy".equals(cmd)) {
-            cmdListEnergy(((NhcMessageListMap1) nhcMessageGson).getData());
-        } else if ("executeactions".equals(cmd)) {
-            cmdExecuteActions(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("executethermostat".equals(cmd)) {
-            cmdExecuteThermostat(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("getenergydata".equals(cmd)) {
-            cmdGetEnergyData(((NhcMessageList1) nhcMessageGson).getData(), meterReadingChannel, meterReadingEnd,
-                    meterReadingInit);
-        } else if ("listactions".equals(event)) {
-            eventListActions(((NhcMessageListMap1) nhcMessageGson).getData());
-        } else if ("listthermostat".equals(event)) {
-            eventListThermostat(((NhcMessageListMap1) nhcMessageGson).getData());
-        } else if ("getlive".equals(event)) {
-            eventGetLive(((NhcMessageMap1) nhcMessageGson).getData());
-        } else if ("getalarms".equals(event)) {
-            eventGetAlarms(((NhcMessageMap1) nhcMessageGson).getData());
-        } else {
-            logger.debug("not acted on json {}", nhcMessage);
+        try {
+            if ("systeminfo".equals(cmd)) {
+                cmdSystemInfo(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("startevents".equals(cmd)) {
+                cmdStartEvents(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("stoplive".equals(cmd)) {
+                cmdStopLive(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("getlive".equals(cmd)) {
+                cmdGetLive(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("listlocations".equals(cmd)) {
+                cmdListLocations(((NhcMessageListMap1) nhcMessageGson).getData());
+            } else if ("listactions".equals(cmd)) {
+                cmdListActions(((NhcMessageListMap1) nhcMessageGson).getData());
+            } else if (("listthermostat").equals(cmd)) {
+                cmdListThermostat(((NhcMessageListMap1) nhcMessageGson).getData());
+            } else if ("listenergy".equals(cmd)) {
+                cmdListEnergy(((NhcMessageListMap1) nhcMessageGson).getData());
+            } else if ("executeactions".equals(cmd)) {
+                cmdExecuteActions(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("executethermostat".equals(cmd)) {
+                cmdExecuteThermostat(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("getenergydata".equals(cmd)) {
+                cmdGetEnergyData(((NhcMessageList1) nhcMessageGson).getData(), meterReadingChannel, meterReadingEnd,
+                        meterReadingInit);
+            } else if ("listactions".equals(event)) {
+                eventListActions(((NhcMessageListMap1) nhcMessageGson).getData());
+            } else if ("listthermostat".equals(event)) {
+                eventListThermostat(((NhcMessageListMap1) nhcMessageGson).getData());
+            } else if ("getlive".equals(event)) {
+                eventGetLive(((NhcMessageMap1) nhcMessageGson).getData());
+            } else if ("getalarms".equals(event)) {
+                eventGetAlarms(((NhcMessageMap1) nhcMessageGson).getData());
+            } else {
+                logger.debug("not acted on json {}", nhcMessage);
+            }
+        } catch (ClassCastException e) {
+            readError(nhcMessage, nhcMessageGson);
+        }
+    }
+
+    private void readError(String nhcMessage, NhcMessageBase1 nhcMessageGson) {
+        try {
+            Map<String, String> data = ((NhcMessageMap1) nhcMessageGson).getData();
+            if (data.containsKey("error")) {
+                logger.warn("received error message {} from controller", data.get("error"));
+                logger.debug("received error with json {}", nhcMessage);
+            } else {
+                logger.debug("received unsupported format in json {}", nhcMessage);
+            }
+        } catch (ClassCastException e) {
+            logger.debug("received unsupported format in json {}", nhcMessage);
         }
     }
 
@@ -763,7 +786,8 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
 
         int reading;
         int dayReading;
-        long beforeDayStart = ChronoUnit.MINUTES.between(lastReading, meterReadingEnd.truncatedTo(ChronoUnit.DAYS))
+        long beforeDayStart = ChronoUnit.MINUTES.between(lastReading.atZone(ZoneOffset.UTC),
+                meterReadingEnd.atZone(ZoneOffset.UTC).withZoneSameInstant(getTimeZone()).truncatedTo(ChronoUnit.DAYS))
                 / 10;
 
         logger.trace("received {} individual meter readings for {}, summing up", data.size(), id);
@@ -950,7 +974,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
 
                 LocalDateTime start = meter.getLastReading();
                 if (start != null) {
-                    start = start.plusMinutes(1); // add 1 minute to avoid doubles, values are in 10 min intervals
+                    start = start.plusMinutes(9); // add 9 minute to avoid doubles, values are in 10 min intervals
                 } else {
                     meterReadingInit = true;
                     start = meter.getReferenceDate();
