@@ -203,6 +203,18 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
     }
 
     @Override
+    public void accessRingAndComeInEvent(boolean state) {
+        NhcAccess nhcAccess = this.nhcAccess;
+        if (nhcAccess == null) {
+            logger.debug(" access device with ID {} not initialized", deviceId);
+            return;
+        }
+
+        updateState(CHANNEL_RING_AND_COME_IN, state ? OnOffType.ON : OnOffType.OFF);
+        updateStatus(ThingStatus.ONLINE);
+    }
+
+    @Override
     public void accessDoorLockEvent(boolean state) {
         NhcAccess nhcAccess = this.nhcAccess;
         if (nhcAccess == null) {

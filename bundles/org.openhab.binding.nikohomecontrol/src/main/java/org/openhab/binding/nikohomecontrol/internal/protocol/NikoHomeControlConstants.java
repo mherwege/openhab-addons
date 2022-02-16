@@ -31,6 +31,14 @@ public class NikoHomeControlConstants {
         GENERIC
     }
 
+    // Access control types abstracted from NhcI and NhcII access control types
+    public static enum AccessType {
+        BASE,
+        RINGANDCOMEIN,
+        BELLBUTTON,
+        GENERIC
+    }
+
     // Meter types abstracted from NhcI and NhcII meter types
     public static enum MeterType {
         ENERGY_LIVE,

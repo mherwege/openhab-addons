@@ -285,6 +285,15 @@ public abstract class NikoHomeControlCommunication {
     }
 
     /**
+     * Switches state ring and come on access control device (turns on if off and off if on) by sending it to Niko Home
+     * Control.
+     *
+     * @param accessId
+     */
+    public void executeAccessRingAndComeIn(String accessId) {
+    }
+
+    /**
      * Execute an unlock command on an access control device by sending it to Niko Home Control.
      *
      * @param accessId

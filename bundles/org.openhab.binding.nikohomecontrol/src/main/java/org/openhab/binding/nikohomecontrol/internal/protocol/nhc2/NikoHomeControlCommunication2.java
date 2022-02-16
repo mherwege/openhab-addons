@@ -39,6 +39,7 @@ import org.openhab.binding.nikohomecontrol.internal.protocol.NhcControllerEvent;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeter;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcThermostat;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.ActionType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.MeterType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcDevice2.NhcParameter;
@@ -375,89 +376,119 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         }
 
         if ("accesscontrol".equals(device.model) || "bellbutton".equals(device.model)) {
-            NhcAccess nhcAccess = accessDevices.get(device.uuid);
-            if (nhcAccess != null) {
-                nhcAccess.setName(device.name);
-                nhcAccess.setLocation(location);
-            } else {
-                logger.debug("adding access device {} model {}, {}", device.uuid, device.model, device.name);
-                nhcAccess = new NhcAccess2(device.uuid, device.name, device.type, device.technology, device.model,
-                        location, this);
-            }
-            accessDevices.put(device.uuid, nhcAccess);
+            addAccessDevice(device, location);
         } else if ("action".equals(device.type) || "virtual".equals(device.type)) {
-            ActionType actionType;
-            switch (device.model) {
-                case "generic":
-                case "pir":
-                case "simulation":
-                case "comfort":
-                case "alarms":
-                case "alloff":
-                case "overallcomfort":
-                case "garagedoor":
-                    actionType = ActionType.TRIGGER;
-                    break;
-                case "light":
-                case "socket":
-                case "switched-generic":
-                case "switched-fan":
-                case "flag":
-                    actionType = ActionType.RELAY;
-                    break;
-                case "dimmer":
-                    actionType = ActionType.DIMMER;
-                    break;
-                case "rolldownshutter":
-                case "sunblind":
-                case "venetianblind":
-                case "gate":
-                    actionType = ActionType.ROLLERSHUTTER;
-                    break;
-                default:
-                    actionType = ActionType.GENERIC;
-                    logger.debug("device type {} and model {} not recognised for {}, {}, ignoring", device.type,
-                            device.model, device.uuid, device.name);
-                    return;
-            }
-
-            NhcAction nhcAction = actions.get(device.uuid);
-            if (nhcAction != null) {
-                // update name and location so discovery will see updated name and location
-                nhcAction.setName(device.name);
-                nhcAction.setLocation(location);
-            } else {
-                logger.debug("adding action device {} model {}, {}", device.uuid, device.model, device.name);
-                nhcAction = new NhcAction2(device.uuid, device.name, device.type, device.technology, device.model,
-                        location, actionType, this);
-            }
-            actions.put(device.uuid, nhcAction);
+            addActionDevice(device, location);
         } else if ("thermostat".equals(device.type)) {
-            NhcThermostat nhcThermostat = thermostats.get(device.uuid);
-            if (nhcThermostat != null) {
-                nhcThermostat.setName(device.name);
-                nhcThermostat.setLocation(location);
-            } else {
-                logger.debug("adding thermostat device {} model {}, {}", device.uuid, device.model, device.name);
-                nhcThermostat = new NhcThermostat2(device.uuid, device.name, device.type, device.technology,
-                        device.model, location, this);
-            }
-            thermostats.put(device.uuid, nhcThermostat);
+            addThermostatDevice(device, location);
         } else if ("centralmeter".equals(device.type) || "energyhome".equals(device.type)) {
-            NhcMeter nhcMeter = meters.get(device.uuid);
-            if (nhcMeter != null) {
-                nhcMeter.setName(device.name);
-                nhcMeter.setLocation(location);
-            } else {
-                logger.debug("adding energy meter device {} model {}, {}", device.uuid, device.model, device.name);
-                nhcMeter = new NhcMeter2(device.uuid, device.name, MeterType.ENERGY_LIVE, device.type,
-                        device.technology, device.model, null, location, this, scheduler);
-            }
-            meters.put(device.uuid, nhcMeter);
+            addMeterDevice(device, location);
         } else {
             logger.debug("device type {} and model {} not supported for {}, {}", device.type, device.model, device.uuid,
                     device.name);
         }
+    }
+
+    private void addAccessDevice(NhcDevice2 device, @Nullable String location) {
+        AccessType accessType;
+        if ("bellbutton".equals(device.model)) {
+            accessType = AccessType.BELLBUTTON;
+        } else {
+            List<NhcProperty> properties = device.properties;
+            if (properties != null) {
+                boolean hasBasicState = properties.stream().map(p -> p.basicState).findAny().isPresent();
+                if (hasBasicState) {
+                    accessType = AccessType.RINGANDCOMEIN;
+                }
+            }
+            accessType = AccessType.BASE;
+        }
+
+        NhcAccess nhcAccess = accessDevices.get(device.uuid);
+        if (nhcAccess != null) {
+            nhcAccess.setName(device.name);
+            nhcAccess.setLocation(location);
+        } else {
+            logger.debug("adding access device {} model {}, {}", device.uuid, device.model, device.name);
+            nhcAccess = new NhcAccess2(device.uuid, device.name, device.type, device.technology, device.model, location,
+                    accessType, this);
+        }
+        accessDevices.put(device.uuid, nhcAccess);
+    }
+
+    private void addActionDevice(NhcDevice2 device, @Nullable String location) {
+        ActionType actionType;
+        switch (device.model) {
+            case "generic":
+            case "pir":
+            case "simulation":
+            case "comfort":
+            case "alarms":
+            case "alloff":
+            case "overallcomfort":
+            case "garagedoor":
+                actionType = ActionType.TRIGGER;
+                break;
+            case "light":
+            case "socket":
+            case "switched-generic":
+            case "switched-fan":
+            case "flag":
+                actionType = ActionType.RELAY;
+                break;
+            case "dimmer":
+                actionType = ActionType.DIMMER;
+                break;
+            case "rolldownshutter":
+            case "sunblind":
+            case "venetianblind":
+            case "gate":
+                actionType = ActionType.ROLLERSHUTTER;
+                break;
+            default:
+                actionType = ActionType.GENERIC;
+                logger.debug("device type {} and model {} not recognised for {}, {}, ignoring", device.type,
+                        device.model, device.uuid, device.name);
+                return;
+        }
+
+        NhcAction nhcAction = actions.get(device.uuid);
+        if (nhcAction != null) {
+            // update name and location so discovery will see updated name and location
+            nhcAction.setName(device.name);
+            nhcAction.setLocation(location);
+        } else {
+            logger.debug("adding action device {} model {}, {}", device.uuid, device.model, device.name);
+            nhcAction = new NhcAction2(device.uuid, device.name, device.type, device.technology, device.model, location,
+                    actionType, this);
+        }
+        actions.put(device.uuid, nhcAction);
+    }
+
+    private void addThermostatDevice(NhcDevice2 device, @Nullable String location) {
+        NhcThermostat nhcThermostat = thermostats.get(device.uuid);
+        if (nhcThermostat != null) {
+            nhcThermostat.setName(device.name);
+            nhcThermostat.setLocation(location);
+        } else {
+            logger.debug("adding thermostat device {} model {}, {}", device.uuid, device.model, device.name);
+            nhcThermostat = new NhcThermostat2(device.uuid, device.name, device.type, device.technology, device.model,
+                    location, this);
+        }
+        thermostats.put(device.uuid, nhcThermostat);
+    }
+
+    private void addMeterDevice(NhcDevice2 device, @Nullable String location) {
+        NhcMeter nhcMeter = meters.get(device.uuid);
+        if (nhcMeter != null) {
+            nhcMeter.setName(device.name);
+            nhcMeter.setLocation(location);
+        } else {
+            logger.debug("adding energy meter device {} model {}, {}", device.uuid, device.model, device.name);
+            nhcMeter = new NhcMeter2(device.uuid, device.name, MeterType.ENERGY_LIVE, device.type, device.technology,
+                    device.model, null, location, this, scheduler);
+        }
+        meters.put(device.uuid, nhcMeter);
     }
 
     private void removeDevice(NhcDevice2 device) {
@@ -649,13 +680,23 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
                 .findFirst();
 
         if (basicStateProperty.isPresent()) {
-            String bellState = basicStateProperty.get().basicState;
+            String basicState = basicStateProperty.get().basicState;
             boolean state = false;
-            if (NHCON.equals(bellState) || NHCTRUE.equals(bellState)) {
+            if (NHCON.equals(basicState) || NHCTRUE.equals(basicState)) {
                 state = true;
             }
-            accessDevice.updateBellState(state);
-            logger.debug("setting access device {} bell to {}", accessDevice.getId(), state);
+            switch (accessDevice.getType()) {
+                case RINGANDCOMEIN:
+                    accessDevice.updateRingAndComeInState(state);
+                    logger.debug("setting access device {} ring and come in to {}", accessDevice.getId(), state);
+                    break;
+                case BELLBUTTON:
+                    accessDevice.updateBellState(state);
+                    logger.debug("setting access device {} bell to {}", accessDevice.getId(), state);
+                    break;
+                default:
+                    break;
+            }
         }
 
         if (doorLockProperty.isPresent()) {
@@ -850,6 +891,15 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
 
     @Override
     public void executeAccessBell(String accessId) {
+        executeAccess(accessId);
+    }
+
+    @Override
+    public void executeAccessRingAndComeIn(String accessId) {
+        executeAccess(accessId);
+    }
+
+    private void executeAccess(String accessId) {
         NhcMessage2 message = new NhcMessage2();
 
         message.method = "devices.control";

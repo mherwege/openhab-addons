@@ -14,6 +14,8 @@ package org.openhab.binding.nikohomecontrol.internal.protocol;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.ActionType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcAccess2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,16 +36,20 @@ public abstract class NhcAccess {
 
     protected String id;
     protected String name;
+    protected AccessType type;
     protected @Nullable String location;
     protected volatile boolean bellRinging;
+    protected volatile boolean ringAndComeIn;
     protected volatile boolean locked;
 
     @Nullable
     private NhcAccessEvent eventHandler;
 
-    protected NhcAccess(String id, String name, @Nullable String location, NikoHomeControlCommunication nhcComm) {
+    protected NhcAccess(String id, String name, AccessType type, @Nullable String location,
+            NikoHomeControlCommunication nhcComm) {
         this.id = id;
         this.name = name;
+        this.type = type;
         this.location = location;
         this.nhcComm = nhcComm;
     }
@@ -96,6 +102,18 @@ public abstract class NhcAccess {
     }
 
     /**
+     * Get type of access control identified.
+     * <p>
+     * AccessType can be GENERIC (only doorlock), RINGANDCOMEIN (doorlock and ring and come in on/off) or BELLBUTTON
+     * (doorlock and bell ringing).
+     *
+     * @return {@link ActionType}
+     */
+    public AccessType getType() {
+        return type;
+    }
+
+    /**
      * Get location name of access control device.
      *
      * @return location name
@@ -131,6 +149,15 @@ public abstract class NhcAccess {
         }
     }
 
+    public void updateRingAndComeInState(boolean state) {
+        ringAndComeIn = state;
+        NhcAccessEvent eventHandler = this.eventHandler;
+        if (eventHandler != null) {
+            logger.debug("update channel state for {} with {}", id, state);
+            eventHandler.accessRingAndComeInEvent(state);
+        }
+    }
+
     /**
      * Get state of the access control device.
      *
@@ -162,8 +189,13 @@ public abstract class NhcAccess {
     }
 
     public void executeBell() {
-        logger.debug("execute unlock for {}", id);
+        logger.debug("execute bell for {}", id);
         nhcComm.executeAccessBell(id);
+    }
+
+    public void executeRingAndComeIn() {
+        logger.debug("execute ring and come in for {}", id);
+        nhcComm.executeAccessRingAndComeIn(id);
     }
 
     public void executeUnlock() {

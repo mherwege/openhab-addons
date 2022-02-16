@@ -16,6 +16,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAccess;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
 
 /**
  * The {@link NhcAccess2} class represents the access control Niko Home Control communication object. It contains all
@@ -32,8 +33,8 @@ public class NhcAccess2 extends NhcAccess {
     private String deviceModel;
 
     NhcAccess2(String id, String name, String deviceType, String deviceTechnology, String deviceModel,
-            @Nullable String location, NikoHomeControlCommunication nhcComm) {
-        super(id, name, location, nhcComm);
+            @Nullable String location, AccessType accessType, NikoHomeControlCommunication nhcComm) {
+        super(id, name, accessType, location, nhcComm);
         this.deviceType = deviceType;
         this.deviceTechnology = deviceTechnology;
         this.deviceModel = deviceModel;

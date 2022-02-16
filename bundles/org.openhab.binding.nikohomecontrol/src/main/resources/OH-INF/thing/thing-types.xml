@@ -283,6 +283,39 @@
 		<label>@text/accessLabel</label>
 		<description>@text/acessDescription</description>
 		<channels>
+			<channel id="lock" typeId="lock"/>
+		</channels>
+		<config-description>
+			<parameter name="accessId" type="text" required="true">
+				<label>@text/deviceConfigDeviceIdLabel</label>
+				<description>@text/deviceConfigDeviceIdDescription</description>
+			</parameter>
+		</config-description>
+	</thing-type>
+	<thing-type id="accessRingAndComeIn">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="bridge2"/>
+		</supported-bridge-type-refs>
+		<label>@text/accessRingAndComeInLabel</label>
+		<description>@text/acessRingAndComeInDescription</description>
+		<channels>
+			<channel id="ringAndComeIn" typeId="ringAndComeIn"/>
+			<channel id="lock" typeId="lock"/>
+		</channels>
+		<config-description>
+			<parameter name="accessId" type="text" required="true">
+				<label>@text/deviceConfigDeviceIdLabel</label>
+				<description>@text/deviceConfigDeviceIdDescription</description>
+			</parameter>
+		</config-description>
+	</thing-type>
+	<thing-type id="accessBellButton">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="bridge2"/>
+		</supported-bridge-type-refs>
+		<label>@text/accessBellButtonLabel</label>
+		<description>@text/acessBellButtonDescription</description>
+		<channels>
 			<channel id="bellButton" typeId="bellButton"/>
 			<channel id="lock" typeId="lock"/>
 		</channels>
@@ -462,6 +495,12 @@
 		<description>@text/channelBellButtonDescription</description>
 		<category>Switch</category>
 		<autoUpdatePolicy>veto</autoUpdatePolicy>
+	</channel-type>
+	<channel-type id="ringAndComeIn">
+		<item-type>Switch</item-type>
+		<label>@text/channelRingAndComeInLabel</label>
+		<description>@text/channelRingAndComeInDescription</description>
+		<category>Switch</category>
 	</channel-type>
 	<channel-type id="lock">
 		<item-type>Switch</item-type>
