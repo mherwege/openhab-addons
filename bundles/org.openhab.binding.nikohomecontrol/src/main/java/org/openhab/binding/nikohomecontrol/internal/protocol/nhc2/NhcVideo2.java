@@ -12,30 +12,28 @@
  */
 package org.openhab.binding.nikohomecontrol.internal.protocol.nhc2;
 
+import static org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.NHCRINGING;
+
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAccess;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcVideo;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
 
 /**
- * The {@link NhcAccess2} class represents the access control Niko Home Control communication object. It contains all
- * fields representing a Niko Home Control access control device and has methods to unlock the door in Niko Home Control
- * and receive bell signals.
+ * The {@link NhcVideo2} class represents a Niko Home Control 2 video door station device. It is used in conjunction
+ * with NhcAccess2 to capture the bell signal on a video door station for access control.
  *
  * @author Mark Herwege - Initial Contribution
  */
 @NonNullByDefault
-public class NhcAccess2 extends NhcAccess {
+public class NhcVideo2 extends NhcVideo {
+    private String deviceType;
+    private String deviceTechnology;
+    private String deviceModel;
 
-    protected String deviceType;
-    protected String deviceTechnology;
-    protected String deviceModel;
-
-    NhcAccess2(String id, String name, String deviceType, String deviceTechnology, String deviceModel,
-            @Nullable String location, AccessType accessType, @Nullable String buttonId,
-            NikoHomeControlCommunication nhcComm) {
-        super(id, name, location, accessType, buttonId, nhcComm);
+    NhcVideo2(String id, String name, String deviceType, String deviceTechnology, String deviceModel,
+            @Nullable String macAddress, NikoHomeControlCommunication nhcComm) {
+        super(id, name, macAddress, nhcComm);
         this.deviceType = deviceType;
         this.deviceTechnology = deviceTechnology;
         this.deviceModel = deviceModel;
@@ -60,5 +58,18 @@ public class NhcAccess2 extends NhcAccess {
      */
     public String getDeviceModel() {
         return deviceModel;
+    }
+
+    @Override
+    public void updateState(@Nullable String callStatus01, @Nullable String callStatus02, @Nullable String callStatus03,
+            @Nullable String callStatus04) {
+        callStatus.put(1, callStatus01);
+        callStatus.put(2, callStatus02);
+        callStatus.put(3, callStatus03);
+        callStatus.put(4, callStatus04);
+
+        nhcAccessMap.forEach((buttonIndex, access) -> {
+            access.updateBellState(NHCRINGING.equals(callStatus.get(buttonIndex)) ? true : false);
+        });
     }
 }

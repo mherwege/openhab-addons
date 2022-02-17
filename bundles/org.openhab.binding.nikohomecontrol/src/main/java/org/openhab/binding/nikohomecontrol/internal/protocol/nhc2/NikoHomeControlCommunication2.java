@@ -19,10 +19,12 @@ import java.net.InetAddress;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,6 +46,7 @@ import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCons
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.MeterType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcDevice2.NhcParameter;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcDevice2.NhcProperty;
+import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcDevice2.NhcTrait;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcMessage2.NhcMessageParam;
 import org.openhab.core.io.transport.mqtt.MqttConnectionObserver;
 import org.openhab.core.io.transport.mqtt.MqttConnectionState;
@@ -84,6 +87,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
 
     private volatile @Nullable NhcSystemInfo2 nhcSystemInfo;
     private volatile @Nullable NhcTimeInfo2 nhcTimeInfo;
+
+    protected final Map<String, NhcVideo2> videoDevices = new ConcurrentHashMap<>();
 
     private volatile boolean initStarted = false;
     private volatile @Nullable CompletableFuture<Boolean> communicationStarted;
@@ -375,6 +380,9 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             location = parameters.stream().map(p -> p.locationName).filter(Objects::nonNull).findFirst().orElse(null);
         }
 
+        if ("videodoorstation".equals(device.type) || "vds".equals(device.type)) {
+            addVideoDevice(device);
+        }
         if ("accesscontrol".equals(device.model) || "bellbutton".equals(device.model)) {
             addAccessDevice(device, location);
         } else if ("action".equals(device.type) || "virtual".equals(device.type)) {
@@ -387,33 +395,6 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             logger.debug("device type {} and model {} not supported for {}, {}", device.type, device.model, device.uuid,
                     device.name);
         }
-    }
-
-    private void addAccessDevice(NhcDevice2 device, @Nullable String location) {
-        AccessType accessType;
-        if ("bellbutton".equals(device.model)) {
-            accessType = AccessType.BELLBUTTON;
-        } else {
-            List<NhcProperty> properties = device.properties;
-            if (properties != null) {
-                boolean hasBasicState = properties.stream().map(p -> p.basicState).findAny().isPresent();
-                if (hasBasicState) {
-                    accessType = AccessType.RINGANDCOMEIN;
-                }
-            }
-            accessType = AccessType.BASE;
-        }
-
-        NhcAccess nhcAccess = accessDevices.get(device.uuid);
-        if (nhcAccess != null) {
-            nhcAccess.setName(device.name);
-            nhcAccess.setLocation(location);
-        } else {
-            logger.debug("adding access device {} model {}, {}", device.uuid, device.model, device.name);
-            nhcAccess = new NhcAccess2(device.uuid, device.name, device.type, device.technology, device.model, location,
-                    accessType, this);
-        }
-        accessDevices.put(device.uuid, nhcAccess);
     }
 
     private void addActionDevice(NhcDevice2 device, @Nullable String location) {
@@ -491,11 +472,96 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         meters.put(device.uuid, nhcMeter);
     }
 
+    private void addAccessDevice(NhcDevice2 device, @Nullable String location) {
+        AccessType accessType;
+        if ("bellbutton".equals(device.model)) {
+            accessType = AccessType.BELLBUTTON;
+        } else {
+            List<NhcProperty> properties = device.properties;
+            if (properties != null) {
+                boolean hasBasicState = properties.stream().map(p -> p.basicState).findAny().isPresent();
+                if (hasBasicState) {
+                    accessType = AccessType.RINGANDCOMEIN;
+                }
+            }
+            accessType = AccessType.BASE;
+        }
+
+        NhcAccess2 nhcAccess = (NhcAccess2) accessDevices.get(device.uuid);
+        if (nhcAccess != null) {
+            nhcAccess.setName(device.name);
+            nhcAccess.setLocation(location);
+        } else {
+            String buttonId = null;
+            List<NhcParameter> parameters = device.parameters;
+            if (parameters != null) {
+                buttonId = parameters.stream().map(p -> p.buttonId).filter(Objects::nonNull).findFirst().orElse(null);
+            }
+
+            logger.debug("adding access device {} model {}, {}", device.uuid, device.model, device.name);
+            nhcAccess = new NhcAccess2(device.uuid, device.name, device.type, device.technology, device.model, location,
+                    accessType, buttonId, this);
+
+            if (buttonId != null) {
+                NhcAccess2 access = nhcAccess;
+                String macAddress = buttonId.split("_")[0];
+                videoDevices.forEach((key, videoDevice) -> {
+                    if (macAddress.equals(videoDevice.getMacAddress())) {
+                        int buttonIndex = access.getButtonIndex();
+                        logger.debug("link access device {} to video device {} button {}", device.uuid,
+                                videoDevice.getId(), buttonIndex);
+                        videoDevice.setNhcAccess(access.getButtonIndex(), access);
+                        access.setNhcVideo(videoDevice);
+                    }
+                });
+            }
+        }
+        accessDevices.put(device.uuid, nhcAccess);
+    }
+
+    private void addVideoDevice(NhcDevice2 device) {
+        NhcVideo2 nhcVideo = videoDevices.get(device.uuid);
+        if (nhcVideo != null) {
+            nhcVideo.setName(device.name);
+        } else {
+            String macAddress = null;
+            List<NhcTrait> traits = device.traits;
+            if (traits != null) {
+                macAddress = traits.stream().map(t -> t.macAddress).filter(Objects::nonNull).findFirst().orElse(null);
+            }
+
+            logger.debug("adding video device {} model {}, {}", device.uuid, device.model, device.name);
+            nhcVideo = new NhcVideo2(device.uuid, device.name, device.type, device.technology, device.model, macAddress,
+                    this);
+
+            if (macAddress != null) {
+                NhcVideo2 video = nhcVideo;
+                String mac = macAddress;
+                accessDevices.forEach((key, accessDevice) -> {
+                    NhcAccess2 access = (NhcAccess2) accessDevice;
+                    String buttonMac = access.getButtonId();
+                    if (buttonMac != null) {
+                        buttonMac = buttonMac.split("_")[0];
+                        if (mac.equals(buttonMac)) {
+                            int buttonIndex = access.getButtonIndex();
+                            logger.debug("link access device {} to video device {} button {}", accessDevice.getId(),
+                                    device.uuid, buttonIndex);
+                            video.setNhcAccess(buttonIndex, access);
+                            access.setNhcVideo(video);
+                        }
+                    }
+                });
+            }
+        }
+        videoDevices.put(device.uuid, nhcVideo);
+    }
+
     private void removeDevice(NhcDevice2 device) {
         NhcAction action = actions.get(device.uuid);
         NhcThermostat thermostat = thermostats.get(device.uuid);
         NhcMeter meter = meters.get(device.uuid);
-        NhcAccess accessDevice = accessDevices.get(device.uuid);
+        NhcAccess access = accessDevices.get(device.uuid);
+        NhcVideo2 video = videoDevices.get(device.uuid);
         if (action != null) {
             action.actionRemoved();
             actions.remove(device.uuid);
@@ -505,9 +571,12 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         } else if (meter != null) {
             meter.meterRemoved();
             meters.remove(device.uuid);
-        } else if (accessDevice != null) {
-            accessDevice.accessDeviceRemoved();
+        } else if (access != null) {
+            access.accessDeviceRemoved();
             accessDevices.remove(device.uuid);
+        } else if (video != null) {
+            video.videoDeviceRemoved();
+            videoDevices.remove(device.uuid);
         }
     }
 
@@ -522,6 +591,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         NhcThermostat thermostat = thermostats.get(device.uuid);
         NhcMeter meter = meters.get(device.uuid);
         NhcAccess accessDevice = accessDevices.get(device.uuid);
+        NhcVideo2 videoDevice = videoDevices.get(device.uuid);
 
         if (action != null) {
             updateActionState((NhcAction2) action, deviceProperties);
@@ -531,6 +601,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             updateMeterState((NhcMeter2) meter, deviceProperties);
         } else if (accessDevice != null) {
             updateAccessState((NhcAccess2) accessDevice, deviceProperties);
+        } else if (videoDevice != null) {
+            updateVideoState(videoDevice, deviceProperties);
         }
     }
 
@@ -708,6 +780,21 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             accessDevice.updateDoorLockState(state);
             logger.debug("setting access device {} doorlock to {}", accessDevice.getId(), state);
         }
+    }
+
+    private void updateVideoState(NhcVideo2 videoDevice, List<NhcProperty> deviceProperties) {
+        String callStatus01 = deviceProperties.stream().map(p -> p.callStatus01).filter(Objects::nonNull).findFirst()
+                .orElse(null);
+        String callStatus02 = deviceProperties.stream().map(p -> p.callStatus02).filter(Objects::nonNull).findFirst()
+                .orElse(null);
+        String callStatus03 = deviceProperties.stream().map(p -> p.callStatus03).filter(Objects::nonNull).findFirst()
+                .orElse(null);
+        String callStatus04 = deviceProperties.stream().map(p -> p.callStatus04).filter(Objects::nonNull).findFirst()
+                .orElse(null);
+
+        videoDevice.updateState(callStatus01, callStatus02, callStatus03, callStatus04);
+        logger.debug("setting video device {} call status to {}, {}, {}, {}", videoDevice.getId(), callStatus01,
+                callStatus02, callStatus03, callStatus04);
     }
 
     @Override
@@ -923,6 +1010,52 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         }
 
         property.basicState = NHCTRIGGERED;
+
+        String topic = profile + "/control/devices/cmd";
+        String gsonMessage = gson.toJson(message);
+        sendDeviceMessage(topic, gsonMessage);
+    }
+
+    @Override
+    public void executeVideoBell(String accessId, int buttonIndex) {
+        NhcMessage2 message = new NhcMessage2();
+
+        message.method = "devices.control";
+        ArrayList<NhcMessageParam> params = new ArrayList<>();
+        NhcMessageParam param = new NhcMessageParam();
+        params.add(param);
+        message.params = params;
+        ArrayList<NhcDevice2> devices = new ArrayList<>();
+        NhcDevice2 device = new NhcDevice2();
+        devices.add(device);
+        param.devices = devices;
+        device.uuid = accessId;
+        ArrayList<NhcProperty> deviceProperties = new ArrayList<>();
+        NhcProperty property = new NhcProperty();
+        deviceProperties.add(property);
+        device.properties = deviceProperties;
+
+        NhcVideo2 videoDevice = videoDevices.get(accessId);
+        if (videoDevice == null) {
+            return;
+        }
+
+        switch (buttonIndex) {
+            case 1:
+                property.callStatus01 = NHCRINGING;
+                break;
+            case 2:
+                property.callStatus02 = NHCRINGING;
+                break;
+            case 3:
+                property.callStatus03 = NHCRINGING;
+                break;
+            case 4:
+                property.callStatus04 = NHCRINGING;
+                break;
+            default:
+                break;
+        }
 
         String topic = profile + "/control/devices/cmd";
         String gsonMessage = gson.toJson(message);

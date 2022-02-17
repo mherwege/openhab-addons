@@ -53,7 +53,6 @@ public class NikoHomeControlBindingConstants {
     public static final ThingTypeUID THING_TYPE_ACCESS = new ThingTypeUID(BINDING_ID, "access");
     public static final ThingTypeUID THING_TYPE_ACCESS_RINGANDCOMEIN = new ThingTypeUID(BINDING_ID,
             "accessRingAndComeIn");
-    public static final ThingTypeUID THING_TYPE_ACCESS_BELLBUTTON = new ThingTypeUID(BINDING_ID, "accessBellButton");
 
     // thing type sets
     public static final Set<ThingTypeUID> BRIDGE_THING_TYPES_UIDS = Collections
@@ -67,8 +66,7 @@ public class NikoHomeControlBindingConstants {
             Stream.of(THING_TYPE_ENERGYMETER_LIVE, THING_TYPE_ENERGYMETER, THING_TYPE_GASMETER, THING_TYPE_WATERMETER)
                     .collect(Collectors.toSet()));
     public static final Set<ThingTypeUID> ACCESS_THING_TYPES_UIDS = Collections
-            .unmodifiableSet(Stream.of(THING_TYPE_ACCESS, THING_TYPE_ACCESS_RINGANDCOMEIN, THING_TYPE_ACCESS_BELLBUTTON)
-                    .collect(Collectors.toSet()));
+            .unmodifiableSet(Stream.of(THING_TYPE_ACCESS, THING_TYPE_ACCESS_RINGANDCOMEIN).collect(Collectors.toSet()));
     public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Stream
             .concat(BRIDGE_THING_TYPES_UIDS.stream(),
                     Stream.concat(ACTION_THING_TYPES_UIDS.stream(),

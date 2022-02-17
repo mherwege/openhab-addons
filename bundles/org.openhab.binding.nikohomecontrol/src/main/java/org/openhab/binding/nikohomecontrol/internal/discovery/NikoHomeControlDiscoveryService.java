@@ -182,11 +182,13 @@ public class NikoHomeControlDiscoveryService extends AbstractDiscoveryService im
 
             switch (nhcAccess.getType()) {
                 case BASE:
+                case BELLBUTTON:
+                    addDevice(new ThingUID(THING_TYPE_ACCESS, bridgeHandler.getThing().getUID(), deviceId),
+                            CONFIG_ACCESS_ID, deviceId, thingName, thingLocation);
                     break;
                 case RINGANDCOMEIN:
-                    break;
-                case BELLBUTTON:
-                    addDevice(new ThingUID(THING_TYPE_ACCESS_BELLBUTTON, bridgeHandler.getThing().getUID(), deviceId),
+                    addDevice(
+                            new ThingUID(THING_TYPE_ACCESS_RINGANDCOMEIN, bridgeHandler.getThing().getUID(), deviceId),
                             CONFIG_ACCESS_ID, deviceId, thingName, thingLocation);
                     break;
                 default:

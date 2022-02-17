@@ -62,9 +62,12 @@ public class NikoHomeControlConstants {
     public static final String NHCUP = "Up";
     public static final String NHCSTOP = "Stop";
 
-    // doorlock constants in the Nhc layer
+    // doorlock, bell and video constants in the Nhc layer
     public static final String NHCOPEN = "Open";
     public static final String NHCCLOSED = "Closed";
+    public static final String NHCIDLE = "Idle";
+    public static final String NHCRINGING = "Ringing";
+    public static final String NHCACTIVE = "Active";
 
     // NhcII thermostat modes
     public static final String[] THERMOSTATMODES = { "Day", "Night", "Eco", "Off", "Cool", "Prog1", "Prog2", "Prog3" };

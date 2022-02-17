@@ -23,6 +23,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAccess;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAccessEvent;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcAccess2;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.thing.Bridge;
@@ -161,6 +162,10 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
             }
 
             accessBellEvent(nhcAccess.getBellState());
+            accessDoorLockEvent(nhcAccess.getDoorLockState());
+            if (nhcAccess.getType().equals(AccessType.RINGANDCOMEIN)) {
+                accessRingAndComeInEvent(nhcAccess.getRingAndComeInState());
+            }
         });
     }
 

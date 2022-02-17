@@ -92,6 +92,15 @@ class NhcDevice2 {
         // fields for access control
         @Nullable
         String doorlock;
+        // fields for video devices
+        @Nullable
+        String callStatus01;
+        @Nullable
+        String callStatus02;
+        @Nullable
+        String callStatus03;
+        @Nullable
+        String callStatus04;
     }
 
     static class NhcTrait {
@@ -120,6 +129,15 @@ class NhcDevice2 {
         String clampType;
         @Nullable
         String shortName;
+        // fields for access control
+        @Nullable
+        String buttonId;
+        @Nullable
+        String ringTone;
+        @Nullable
+        String declineCallAppliedOnAllDevices;
+        @Nullable
+        String iconCode;
     }
 
     String name = "";

@@ -15,7 +15,6 @@ package org.openhab.binding.nikohomecontrol.internal.protocol;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
-import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.ActionType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.nhc2.NhcAccess2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +28,6 @@ import org.slf4j.LoggerFactory;
  */
 @NonNullByDefault
 public abstract class NhcAccess {
-
     private final Logger logger = LoggerFactory.getLogger(NhcAccess.class);
 
     protected NikoHomeControlCommunication nhcComm;
@@ -42,16 +40,30 @@ public abstract class NhcAccess {
     protected volatile boolean ringAndComeIn;
     protected volatile boolean locked;
 
+    protected @Nullable NhcVideo nhcVideo;
+    protected @Nullable String buttonId;
+    protected int buttonIndex = 1;
+
     @Nullable
     private NhcAccessEvent eventHandler;
 
-    protected NhcAccess(String id, String name, AccessType type, @Nullable String location,
+    protected NhcAccess(String id, String name, @Nullable String location, AccessType type, @Nullable String buttonId,
             NikoHomeControlCommunication nhcComm) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.location = location;
         this.nhcComm = nhcComm;
+
+        this.buttonId = buttonId;
+        try {
+            if (buttonId != null) {
+                int index = Integer.parseInt(buttonId.split("_")[1]);
+                buttonIndex = index;
+            }
+        } catch (NumberFormatException e) {
+            logger.debug("cannot retrieve button index from butto id {}", buttonId);
+        }
     }
 
     /**
@@ -72,6 +84,10 @@ public abstract class NhcAccess {
      */
     public void unsetEventHandler() {
         this.eventHandler = null;
+    }
+
+    public void setNhcVideo(@Nullable NhcVideo nhcVideo) {
+        this.nhcVideo = nhcVideo;
     }
 
     /**
@@ -132,6 +148,17 @@ public abstract class NhcAccess {
     }
 
     /**
+     * @return buttonId of button connected to access control action, null if no button connected
+     */
+    public @Nullable String getButtonId() {
+        return buttonId;
+    }
+
+    public int getButtonIndex() {
+        return buttonIndex;
+    }
+
+    /**
      * Get state of the access control device.
      *
      * @return action state
@@ -147,6 +174,15 @@ public abstract class NhcAccess {
             logger.debug("update channel state for {} with {}", id, state);
             eventHandler.accessBellEvent(state);
         }
+    }
+
+    /**
+     * Get state of ring and come in.
+     *
+     * @return ring and come in state, true if enabled
+     */
+    public boolean getRingAndComeInState() {
+        return ringAndComeIn;
     }
 
     public void updateRingAndComeInState(boolean state) {
@@ -186,11 +222,22 @@ public abstract class NhcAccess {
             eventHandler.deviceRemoved();
             unsetEventHandler();
         }
+
+        NhcVideo video = nhcVideo;
+        if (video != null) {
+            video.removeNhcAccess(buttonIndex);
+        }
+        nhcVideo = null;
     }
 
     public void executeBell() {
-        logger.debug("execute bell for {}", id);
-        nhcComm.executeAccessBell(id);
+        NhcVideo video = nhcVideo;
+        if (type.equals(AccessType.BELLBUTTON)) {
+            logger.debug("execute bell for {}", id);
+            nhcComm.executeAccessBell(id);
+        } else if (video != null) {
+            video.executeBell(buttonIndex);
+        }
     }
 
     public void executeRingAndComeIn() {
