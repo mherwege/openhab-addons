@@ -192,6 +192,23 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
             properties.put("deviceModel", access.getDeviceModel());
         }
 
+        String ipAddress = nhcAccess.getIpAddress();
+        if (ipAddress != null) {
+            properties.put("ipAddress", ipAddress);
+        }
+        String buttonId = nhcAccess.getButtonId();
+        if (buttonId != null) {
+            properties.put("buttonId", buttonId);
+        }
+        String mjpegUri = nhcAccess.getMjpegUri();
+        if (mjpegUri != null) {
+            properties.put("mjpegUri", mjpegUri);
+        }
+        String tnUri = nhcAccess.getTnUri();
+        if (tnUri != null) {
+            properties.put("tnUri", tnUri);
+        }
+
         thing.setProperties(properties);
     }
 
@@ -229,5 +246,13 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
 
         updateState(CHANNEL_LOCK, state ? OnOffType.ON : OnOffType.OFF);
         updateStatus(ThingStatus.ONLINE);
+    }
+
+    @Override
+    public void updateVideoDeviceProperties() {
+        NhcAccess access = nhcAccess;
+        if (access != null) {
+            updateProperties(access);
+        }
     }
 }

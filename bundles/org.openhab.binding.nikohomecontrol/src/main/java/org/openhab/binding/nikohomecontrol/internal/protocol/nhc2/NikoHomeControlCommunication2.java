@@ -525,14 +525,20 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             nhcVideo.setName(device.name);
         } else {
             String macAddress = null;
+            String ipAddress = null;
+            String mjpegUri = null;
+            String tnUri = null;
             List<NhcTrait> traits = device.traits;
             if (traits != null) {
                 macAddress = traits.stream().map(t -> t.macAddress).filter(Objects::nonNull).findFirst().orElse(null);
+                ipAddress = traits.stream().map(t -> t.ipAddress).filter(Objects::nonNull).findFirst().orElse(null);
+                mjpegUri = traits.stream().map(t -> t.mjpegUri).filter(Objects::nonNull).findFirst().orElse(null);
+                tnUri = traits.stream().map(t -> t.tnUri).filter(Objects::nonNull).findFirst().orElse(null);
             }
 
             logger.debug("adding video device {} model {}, {}", device.uuid, device.model, device.name);
             nhcVideo = new NhcVideo2(device.uuid, device.name, device.type, device.technology, device.model, macAddress,
-                    this);
+                    ipAddress, mjpegUri, tnUri, this);
 
             if (macAddress != null) {
                 NhcVideo2 video = nhcVideo;

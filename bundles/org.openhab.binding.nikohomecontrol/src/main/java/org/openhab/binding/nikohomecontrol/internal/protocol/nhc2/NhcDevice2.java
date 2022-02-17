@@ -111,6 +111,13 @@ class NhcDevice2 {
         String channel;
         @Nullable
         String meterType;
+        // fields for video devices
+        @Nullable
+        String ipAddress;
+        @Nullable
+        String mjpegUri;
+        @Nullable
+        String tnUri;
     }
 
     static class NhcParameter {

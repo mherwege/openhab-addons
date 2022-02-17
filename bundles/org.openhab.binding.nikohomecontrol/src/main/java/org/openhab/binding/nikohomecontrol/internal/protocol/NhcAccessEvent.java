@@ -45,4 +45,9 @@ public interface NhcAccessEvent extends NhcBaseEvent {
      * @param state true for locked
      */
     public void accessDoorLockEvent(boolean state);
+
+    /**
+     * Update video device properties.
+     */
+    public void updateVideoDeviceProperties();
 }

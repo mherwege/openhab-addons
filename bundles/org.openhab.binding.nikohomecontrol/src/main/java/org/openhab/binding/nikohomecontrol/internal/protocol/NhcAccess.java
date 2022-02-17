@@ -88,6 +88,10 @@ public abstract class NhcAccess {
 
     public void setNhcVideo(@Nullable NhcVideo nhcVideo) {
         this.nhcVideo = nhcVideo;
+        NhcAccessEvent handler = eventHandler;
+        if (handler != null) {
+            handler.updateVideoDeviceProperties();
+        }
     }
 
     /**
@@ -156,6 +160,21 @@ public abstract class NhcAccess {
 
     public int getButtonIndex() {
         return buttonIndex;
+    }
+
+    public @Nullable String getIpAddress() {
+        NhcVideo video = nhcVideo;
+        return (video != null) ? video.getIpAddress() : null;
+    }
+
+    public @Nullable String getMjpegUri() {
+        NhcVideo video = nhcVideo;
+        return (video != null) ? video.getMjpegUri() : null;
+    }
+
+    public @Nullable String getTnUri() {
+        NhcVideo video = nhcVideo;
+        return (video != null) ? video.getTnUri() : null;
     }
 
     /**

@@ -12,6 +12,8 @@
  */
 package org.openhab.binding.nikohomecontrol.internal.protocol;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,12 +41,28 @@ public abstract class NhcVideo {
     protected Map<Integer, @Nullable String> callStatus = new ConcurrentHashMap<>();
     protected Map<Integer, NhcAccess> nhcAccessMap = new ConcurrentHashMap<>();
 
-    protected NhcVideo(String id, String name, @Nullable String macAddress, NikoHomeControlCommunication nhcComm) {
+    private @Nullable String ipAddress = null;
+    private @Nullable String mjpegUri;
+    private @Nullable String tnUri;
+
+    protected NhcVideo(String id, String name, @Nullable String macAddress, @Nullable String ipAddress,
+            @Nullable String mjpegUri, @Nullable String tnUri, NikoHomeControlCommunication nhcComm) {
         this.id = id;
         this.name = name;
         this.nhcComm = nhcComm;
 
         this.macAddress = macAddress;
+
+        if (ipAddress != null) {
+            try {
+                // receiving IPv4 address as string with format L.00, convert to classic format for ip address
+                this.ipAddress = InetAddress.getByName(ipAddress.split("\\.")[0]).getHostAddress();
+            } catch (UnknownHostException e) {
+                logger.debug("invalid ip address {} for video device {}", ipAddress, id);
+            }
+        }
+        this.mjpegUri = mjpegUri;
+        this.tnUri = tnUri;
     }
 
     @Nullable
@@ -62,6 +80,18 @@ public abstract class NhcVideo {
 
     public @Nullable String getMacAddress() {
         return macAddress;
+    }
+
+    public @Nullable String getIpAddress() {
+        return ipAddress;
+    }
+
+    public @Nullable String getMjpegUri() {
+        return mjpegUri;
+    }
+
+    public @Nullable String getTnUri() {
+        return tnUri;
     }
 
     /**

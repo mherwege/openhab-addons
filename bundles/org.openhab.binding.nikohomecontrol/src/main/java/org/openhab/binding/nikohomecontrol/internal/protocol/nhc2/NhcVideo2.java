@@ -32,8 +32,9 @@ public class NhcVideo2 extends NhcVideo {
     private String deviceModel;
 
     NhcVideo2(String id, String name, String deviceType, String deviceTechnology, String deviceModel,
-            @Nullable String macAddress, NikoHomeControlCommunication nhcComm) {
-        super(id, name, macAddress, nhcComm);
+            @Nullable String macAddress, @Nullable String ipAddress, @Nullable String mjpegUri, @Nullable String tnUri,
+            NikoHomeControlCommunication nhcComm) {
+        super(id, name, macAddress, ipAddress, mjpegUri, tnUri, nhcComm);
         this.deviceType = deviceType;
         this.deviceTechnology = deviceTechnology;
         this.deviceModel = deviceModel;
