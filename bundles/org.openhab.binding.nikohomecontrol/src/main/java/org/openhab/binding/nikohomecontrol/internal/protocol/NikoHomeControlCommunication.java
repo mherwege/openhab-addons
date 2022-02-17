@@ -309,8 +309,9 @@ public abstract class NikoHomeControlCommunication {
      * Control.
      *
      * @param accessId
+     * @param ringAndComeIn status
      */
-    public void executeAccessRingAndComeIn(String accessId) {
+    public void executeAccessRingAndComeIn(String accessId, boolean ringAndComeIn) {
     }
 
     /**

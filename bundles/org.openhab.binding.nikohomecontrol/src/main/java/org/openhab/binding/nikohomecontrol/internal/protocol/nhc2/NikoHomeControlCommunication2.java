@@ -988,8 +988,16 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
     }
 
     @Override
-    public void executeAccessRingAndComeIn(String accessId) {
-        executeAccess(accessId);
+    public void executeAccessRingAndComeIn(String accessId, boolean ringAndComeIn) {
+        NhcAccess2 accessDevice = (NhcAccess2) accessDevices.get(accessId);
+        if (accessDevice == null) {
+            return;
+        }
+
+        boolean current = accessDevice.getRingAndComeInState();
+        if ((ringAndComeIn && !current) || (!ringAndComeIn && current)) {
+            executeAccess(accessId);
+        }
     }
 
     private void executeAccess(String accessId) {

@@ -41,6 +41,8 @@ public abstract class NhcVideo {
     protected Map<Integer, @Nullable String> callStatus = new ConcurrentHashMap<>();
     protected Map<Integer, NhcAccess> nhcAccessMap = new ConcurrentHashMap<>();
 
+    private boolean supportsVideoStream = false;
+
     private @Nullable String ipAddress = null;
     private @Nullable String mjpegUri;
     private @Nullable String tnUri;
@@ -119,6 +121,14 @@ public abstract class NhcVideo {
      */
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean supportsVideoStream() {
+        return supportsVideoStream;
+    }
+
+    public void setSupportsVideoStream() {
+        this.supportsVideoStream = true;
     }
 
     /**

@@ -162,6 +162,11 @@ public abstract class NhcAccess {
         return buttonIndex;
     }
 
+    public boolean supportsVideoStream() {
+        NhcVideo video = nhcVideo;
+        return (video != null) ? video.supportsVideoStream() : false;
+    }
+
     public @Nullable String getIpAddress() {
         NhcVideo video = nhcVideo;
         return (video != null) ? video.getIpAddress() : null;
@@ -259,9 +264,9 @@ public abstract class NhcAccess {
         }
     }
 
-    public void executeRingAndComeIn() {
-        logger.debug("execute ring and come in for {}", id);
-        nhcComm.executeAccessRingAndComeIn(id);
+    public void executeRingAndComeIn(boolean ringAndComeIn) {
+        logger.debug("switch ring and come in for {} to {}", id, ringAndComeIn);
+        nhcComm.executeAccessRingAndComeIn(id, ringAndComeIn);
     }
 
     public void executeUnlock() {

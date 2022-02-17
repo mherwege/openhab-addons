@@ -38,6 +38,10 @@ public class NhcVideo2 extends NhcVideo {
         this.deviceType = deviceType;
         this.deviceTechnology = deviceTechnology;
         this.deviceModel = deviceModel;
+
+        if ("robinsip".equals(deviceModel)) {
+            setSupportsVideoStream();
+        }
     }
 
     /**

@@ -70,6 +70,13 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
                     handleBellButtonCommand(command);
                 }
                 break;
+            case CHANNEL_RING_AND_COME_IN:
+                if (REFRESH.equals(command)) {
+                    accessRingAndComeInEvent(nhcAccess.getRingAndComeInState());
+                } else {
+                    handleRingAndComeInCommand(command);
+                }
+                break;
             case CHANNEL_LOCK:
                 if (REFRESH.equals(command)) {
                     accessDoorLockEvent(nhcAccess.getDoorLockState());
@@ -96,6 +103,19 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
             if (OnOffType.ON.equals(s)) {
                 nhcAccess.executeBell();
             }
+        }
+    }
+
+    private void handleRingAndComeInCommand(Command command) {
+        NhcAccess nhcAccess = this.nhcAccess;
+        if (nhcAccess == null) {
+            logger.debug(" access device with ID {} not initialized", deviceId);
+            return;
+        }
+
+        if (command instanceof OnOffType) {
+            OnOffType s = (OnOffType) command;
+            nhcAccess.executeRingAndComeIn(OnOffType.ON.equals(s));
         }
     }
 
@@ -192,21 +212,26 @@ public class NikoHomeControlAccessHandler extends NikoHomeControlBaseHandler imp
             properties.put("deviceModel", access.getDeviceModel());
         }
 
-        String ipAddress = nhcAccess.getIpAddress();
-        if (ipAddress != null) {
-            properties.put("ipAddress", ipAddress);
-        }
         String buttonId = nhcAccess.getButtonId();
         if (buttonId != null) {
             properties.put("buttonId", buttonId);
         }
-        String mjpegUri = nhcAccess.getMjpegUri();
-        if (mjpegUri != null) {
-            properties.put("mjpegUri", mjpegUri);
-        }
-        String tnUri = nhcAccess.getTnUri();
-        if (tnUri != null) {
-            properties.put("tnUri", tnUri);
+
+        if (nhcAccess.supportsVideoStream()) {
+            properties.put("username", "admin");
+            properties.put("password", "123qwe");
+            String ipAddress = nhcAccess.getIpAddress();
+            if (ipAddress != null) {
+                properties.put("ipAddress", ipAddress);
+            }
+            String mjpegUri = nhcAccess.getMjpegUri();
+            if (mjpegUri != null) {
+                properties.put("mjpegUri", mjpegUri);
+            }
+            String tnUri = nhcAccess.getTnUri();
+            if (tnUri != null) {
+                properties.put("tnUri", tnUri);
+            }
         }
 
         thing.setProperties(properties);
