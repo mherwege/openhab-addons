@@ -196,10 +196,22 @@
 				<label>@text/deviceConfigDeviceIdLabel</label>
 				<description>@text/deviceConfigDeviceIdDescription</description>
 			</parameter>
+			<parameter name="liveRefresh" type="integer">
+				<label>@text/meterConfigLiveRefreshLabel</label>
+				<description>@text/meterConfigLiveRefreshDescription</description>
+				<default>25</default>
+				<advanced>true</advanced>
+			</parameter>
 			<parameter name="refresh" type="integer" min="5">
 				<label>@text/meterConfigRefreshLabel</label>
 				<description>@text/meterConfigRefreshDescription</description>
 				<default>10</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="align" type="boolean">
+				<label>@text/meterConfigAlignLabel</label>
+				<description>@text/meterConfigAlignDescription</description>
+				<default>true</default>
 				<advanced>true</advanced>
 			</parameter>
 		</config-description>
@@ -226,6 +238,12 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
+			<parameter name="align" type="boolean">
+				<label>@text/meterConfigAlignLabel</label>
+				<description>@text/meterConfigAlignDescription</description>
+				<default>false</default>
+				<advanced>true</advanced>
+			</parameter>
 		</config-description>
 	</thing-type>
 	<thing-type id="gasMeter">
@@ -250,6 +268,12 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
+			<parameter name="align" type="boolean">
+				<label>@text/meterConfigAlignLabel</label>
+				<description>@text/meterConfigAlignDescription</description>
+				<default>false</default>
+				<advanced>true</advanced>
+			</parameter>
 		</config-description>
 	</thing-type>
 	<thing-type id="waterMeter">
@@ -272,6 +296,12 @@
 				<label>@text/meterConfigRefreshLabel</label>
 				<description>@text/meterConfigRefreshDescription</description>
 				<default>10</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="align" type="boolean">
+				<label>@text/meterConfigAlignLabel</label>
+				<description>@text/meterConfigAlignDescription</description>
+				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
 		</config-description>

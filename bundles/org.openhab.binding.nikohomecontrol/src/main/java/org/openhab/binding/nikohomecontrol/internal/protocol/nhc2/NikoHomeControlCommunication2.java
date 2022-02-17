@@ -945,7 +945,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
     }
 
     @Override
-    public void executeMeter(String meterId) {
+    public void executeMeter(String meterId, boolean align) {
         // Nothing to do, meter readings not supported in NHC II at this point in time
     }
 

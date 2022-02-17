@@ -251,15 +251,21 @@ public abstract class NhcMeter {
 
     /**
      * Start the flow of energy information from the energy meter. The Niko Home Control energy meter will send power
-     * information every 2s for 30s. This method will retrigger every 25s to make sure the information continues
+     * information every 2s for 30s. This method will retrigger regularly to make sure the information continues
      * flowing. If the information is no longer required, make sure to use the {@link stopMeterLive} method to stop the
      * flow of information.
+     *
+     * @param liveRefresh refresh interval in seconds
      */
-    public void startMeterLive() {
+    public void startMeterLive(int liveRefresh) {
         stopMeterLive();
-        restartTimer = scheduler.scheduleWithFixedDelay(() -> {
+        if (liveRefresh > 0) {
+            restartTimer = scheduler.scheduleWithFixedDelay(() -> {
+                nhcComm.retriggerMeterLive(id);
+            }, 0, liveRefresh, TimeUnit.SECONDS);
+        } else {
             nhcComm.retriggerMeterLive(id);
-        }, 0, 25, TimeUnit.SECONDS);
+        }
     }
 
     /**
@@ -279,14 +285,15 @@ public abstract class NhcMeter {
      * of overloading controller during initialization.
      *
      * @param refresh interval between meter queries
+     * @param align align meter reading start and end time with 10 minute intervals
      */
-    public void startMeter(int refresh) {
+    public void startMeter(int refresh, boolean align) {
         stopMeter();
         int firstRefreshDelay = 10 + r.nextInt(90);
-        logger.debug("schedule meter data refresh for {} every {} minutes, first refresh in {} s", id, refresh,
+        logger.debug("schedule meter data refresh for {} every {} minutes, first refresh in {}s", id, refresh,
                 firstRefreshDelay);
         readingSchedule = scheduler.scheduleWithFixedDelay(() -> {
-            nhcComm.executeMeter(id);
+            nhcComm.executeMeter(id, align);
         }, firstRefreshDelay, refresh * 60, TimeUnit.SECONDS);
     }
 

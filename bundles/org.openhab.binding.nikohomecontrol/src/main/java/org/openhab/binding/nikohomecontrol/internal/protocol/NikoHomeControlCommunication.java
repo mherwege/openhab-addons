@@ -215,29 +215,39 @@ public abstract class NikoHomeControlCommunication {
      * Query meter for energy, gas consumption or water production/consumption data. The query will update the total
      * production/consumption and production/consumption from the start of the day through the meterReadingEvent
      * callback in {@link NhcMeterEvent}.
+     *
+     * @param meterId
+     * @param align align meter reading start and end time with 10 minute intervals
      */
-    public abstract void executeMeter(String meterId);
+    public abstract void executeMeter(String meterId, boolean align);
 
     /**
      * Start retrieving energy meter data from Niko Home Control. The method is used to regularly retrigger the
      * information flow. It can be left empty in concrete classes if the power data is flowing continuously.
+     *
+     * @param meterId
+     * @param liveRefresh retrigger frequency in seconds
      */
-    public void startMeterLive(String meterId) {
+    public void startMeterLive(String meterId, int liveRefresh) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter != null) {
-            meter.startMeterLive();
+            meter.startMeterLive(liveRefresh);
         }
     }
 
     /**
      * Retrigger retrieving energy meter data from Niko Home Control. This is used if the power data does not continue
      * flowing automatically and needs to be retriggered at regular intervals.
+     *
+     * @param meterId
      */
     public abstract void retriggerMeterLive(String meterId);
 
     /**
      * Stop retrieving energy meter data from Niko Home Control. This method can be used to stop a scheduled retrigger
      * of the information flow, as scheduled in {{@link #startMeterLive(String)}.
+     *
+     * @param meterId
      */
     public void stopMeterLive(String meterId) {
         NhcMeter meter = getMeters().get(meterId);
@@ -250,12 +260,13 @@ public abstract class NikoHomeControlCommunication {
      * Start retrieving meter data from Niko Home Control at a regular interval.
      *
      * @param meterId
-     * @param refresh reading frequency
+     * @param refresh reading frequency in minutes
+     * @param align align meter reading start and end with 10 minute intervals
      */
-    public void startMeter(String meterId, int refresh) {
+    public void startMeter(String meterId, int refresh, boolean align) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter != null) {
-            meter.startMeter(refresh);
+            meter.startMeter(refresh, align);
         }
     }
 

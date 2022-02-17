@@ -938,7 +938,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
     }
 
     @Override
-    public void executeMeter(String meterId) {
+    public void executeMeter(String meterId, boolean align) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter == null) {
             return;
@@ -973,9 +973,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
                 meterReadingInit = false;
 
                 LocalDateTime start = meter.getLastReading();
-                if (start != null) {
-                    start = start.plusMinutes(9); // add 9 minute to avoid doubles, values are in 10 min intervals
-                } else {
+                if (start == null) {
                     meterReadingInit = true;
                     start = meter.getReferenceDate();
                     if (start == null) {
@@ -985,6 +983,10 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
                 }
                 String readingStart = start.format(DATE_TIME_FORMAT);
                 LocalDateTime end = ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+                if (align) {
+                    int minute = (end.getMinute() / 10) * 10;
+                    end = end.withMinute(minute);
+                }
                 String readingEnd = end.format(DATE_TIME_FORMAT);
 
                 meterReadingChannel = meterId;
