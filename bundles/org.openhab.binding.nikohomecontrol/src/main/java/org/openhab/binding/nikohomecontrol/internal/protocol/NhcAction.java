@@ -38,6 +38,7 @@ public abstract class NhcAction {
     protected String name;
     protected ActionType type;
     protected @Nullable String location;
+
     protected volatile int state;
     protected volatile int closeTime = 0;
     protected volatile int openTime = 0;

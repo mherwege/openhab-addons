@@ -30,9 +30,9 @@ import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCons
 @NonNullByDefault
 public class NhcMeter2 extends NhcMeter {
 
-    private String deviceType;
-    private String deviceTechnology;
-    private String deviceModel;
+    private final String deviceType;
+    private final String deviceTechnology;
+    private final String deviceModel;
 
     protected NhcMeter2(String id, String name, MeterType meterType, String deviceType, String deviceTechnology,
             String deviceModel, @Nullable LocalDateTime referenceDate, @Nullable String location,

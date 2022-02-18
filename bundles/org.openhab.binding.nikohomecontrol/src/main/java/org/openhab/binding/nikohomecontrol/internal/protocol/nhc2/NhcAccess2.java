@@ -28,9 +28,9 @@ import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCons
 @NonNullByDefault
 public class NhcAccess2 extends NhcAccess {
 
-    protected String deviceType;
-    protected String deviceTechnology;
-    protected String deviceModel;
+    private final String deviceType;
+    private final String deviceTechnology;
+    private final String deviceModel;
 
     NhcAccess2(String id, String name, String deviceType, String deviceTechnology, String deviceModel,
             @Nullable String location, AccessType accessType, @Nullable String buttonId,

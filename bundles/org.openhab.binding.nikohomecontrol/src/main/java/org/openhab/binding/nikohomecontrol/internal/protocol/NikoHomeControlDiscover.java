@@ -49,9 +49,9 @@ public final class NikoHomeControlDiscover {
 
     private final Logger logger = LoggerFactory.getLogger(NikoHomeControlDiscover.class);
 
-    private List<String> nhcBridgeIds = new ArrayList<>();
-    private Map<String, InetAddress> inetAdresses = new HashMap<>();
-    private Map<String, Boolean> isNhcII = new HashMap<>();
+    private final List<String> nhcBridgeIds = new ArrayList<>();
+    private final Map<String, InetAddress> inetAdresses = new HashMap<>();
+    private final Map<String, Boolean> isNhcII = new HashMap<>();
 
     /**
      * Discover the list of Niko Home Control IP interfacse by broadcasting UDP packet 0x44 to port 10000. The IP

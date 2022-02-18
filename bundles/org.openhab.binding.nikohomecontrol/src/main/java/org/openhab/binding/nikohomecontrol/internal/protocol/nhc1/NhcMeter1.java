@@ -33,7 +33,7 @@ public class NhcMeter1 extends NhcMeter {
 
     private static final Map<String, String> TYPE = Map.of("0", "Global", "1", "Submeasurement", "2", "Producer");
 
-    private String meterType;
+    private final String meterType;
 
     NhcMeter1(String id, String name, MeterType meterType, @Nullable String location, String type,
             @Nullable LocalDateTime referenceDate, NikoHomeControlCommunication nhcComm,
@@ -43,6 +43,9 @@ public class NhcMeter1 extends NhcMeter {
         this.meterType = TYPE.getOrDefault(type, "");
     }
 
+    /**
+     * @return type of meter: Global, Submeasurement or Producer
+     */
     public String getMeterType() {
         return meterType;
     }

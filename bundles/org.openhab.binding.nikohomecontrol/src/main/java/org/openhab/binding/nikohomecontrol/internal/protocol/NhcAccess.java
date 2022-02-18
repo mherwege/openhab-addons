@@ -32,10 +32,11 @@ public abstract class NhcAccess {
 
     protected NikoHomeControlCommunication nhcComm;
 
-    protected String id;
+    protected final String id;
     protected String name;
     protected AccessType type;
     protected @Nullable String location;
+
     protected volatile boolean bellRinging;
     protected volatile boolean ringAndComeIn;
     protected volatile boolean locked;
@@ -80,12 +81,16 @@ public abstract class NhcAccess {
     /**
      * This method should be called when an object implementing the {@NhcAccessEvent} interface is disposed.
      * It resets the reference, so no updates go to the handler anymore.
-     *
      */
     public void unsetEventHandler() {
         this.eventHandler = null;
     }
 
+    /**
+     * Sets a link to the video phone device with the bell button that triggers this access device.
+     *
+     * @param nhcVideo
+     */
     public void setNhcVideo(@Nullable NhcVideo nhcVideo) {
         this.nhcVideo = nhcVideo;
         NhcAccessEvent handler = eventHandler;
@@ -158,25 +163,42 @@ public abstract class NhcAccess {
         return buttonId;
     }
 
+    /**
+     * Get the button index of the bell button on the video phone device that is linked to this access device.
+     *
+     * @return button index
+     */
     public int getButtonIndex() {
         return buttonIndex;
     }
 
+    /**
+     * @return true if the connected video phone device supports streaming video
+     */
     public boolean supportsVideoStream() {
         NhcVideo video = nhcVideo;
         return (video != null) ? video.supportsVideoStream() : false;
     }
 
+    /**
+     * @return IP address of connected video phone
+     */
     public @Nullable String getIpAddress() {
         NhcVideo video = nhcVideo;
         return (video != null) ? video.getIpAddress() : null;
     }
 
+    /**
+     * @return URI for MJPEG stream from connected video phone
+     */
     public @Nullable String getMjpegUri() {
         NhcVideo video = nhcVideo;
         return (video != null) ? video.getMjpegUri() : null;
     }
 
+    /**
+     * @return URI for JPEG still images from connected video phone
+     */
     public @Nullable String getTnUri() {
         NhcVideo video = nhcVideo;
         return (video != null) ? video.getTnUri() : null;
@@ -191,6 +213,11 @@ public abstract class NhcAccess {
         return bellRinging;
     }
 
+    /**
+     * Send update of bell state through event handler to subscribers.
+     *
+     * @param state
+     */
     public void updateBellState(boolean state) {
         bellRinging = state;
         NhcAccessEvent eventHandler = this.eventHandler;
@@ -209,6 +236,11 @@ public abstract class NhcAccess {
         return ringAndComeIn;
     }
 
+    /**
+     * Send update of ring and come in state through event handler to subscribers.
+     *
+     * @param state
+     */
     public void updateRingAndComeInState(boolean state) {
         ringAndComeIn = state;
         NhcAccessEvent eventHandler = this.eventHandler;
@@ -227,6 +259,11 @@ public abstract class NhcAccess {
         return locked;
     }
 
+    /**
+     * Send update of doorlock state through event handler to subscribers.
+     *
+     * @param state
+     */
     public void updateDoorLockState(boolean state) {
         locked = state;
         NhcAccessEvent eventHandler = this.eventHandler;
@@ -254,6 +291,9 @@ public abstract class NhcAccess {
         nhcVideo = null;
     }
 
+    /**
+     * Send a ring the bell message to the Niko Home Control controller.
+     */
     public void executeBell() {
         NhcVideo video = nhcVideo;
         if (type.equals(AccessType.BELLBUTTON)) {
@@ -264,11 +304,19 @@ public abstract class NhcAccess {
         }
     }
 
+    /**
+     * Turn ring and come in on/off, send message to controller.
+     *
+     * @param ringAndComeIn
+     */
     public void executeRingAndComeIn(boolean ringAndComeIn) {
         logger.debug("switch ring and come in for {} to {}", id, ringAndComeIn);
         nhcComm.executeAccessRingAndComeIn(id, ringAndComeIn);
     }
 
+    /**
+     * Send a door unlock message to the Niko Home Control controller.
+     */
     public void executeUnlock() {
         logger.debug("execute unlock for {}", id);
         nhcComm.executeAccessUnlock(id);

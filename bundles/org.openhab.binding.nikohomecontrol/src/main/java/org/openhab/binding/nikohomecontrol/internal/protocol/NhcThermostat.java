@@ -40,9 +40,10 @@ public abstract class NhcThermostat {
 
     protected NikoHomeControlCommunication nhcComm;
 
-    protected String id;
+    protected final String id;
     protected String name;
     protected @Nullable String location;
+
     protected volatile int measured;
     protected volatile int setpoint;
     protected volatile int mode;
@@ -51,7 +52,7 @@ public abstract class NhcThermostat {
     protected volatile int ecosave;
     protected volatile int demand;
 
-    private @Nullable volatile ZonedDateTime overruleStart;
+    private volatile @Nullable ZonedDateTime overruleStart;
 
     private @Nullable NhcThermostatEvent eventHandler;
 

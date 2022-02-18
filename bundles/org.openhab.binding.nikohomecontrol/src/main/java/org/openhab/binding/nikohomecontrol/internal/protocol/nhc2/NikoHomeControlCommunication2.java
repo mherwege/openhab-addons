@@ -19,12 +19,10 @@ import java.net.InetAddress;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -40,6 +38,7 @@ import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAction;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcControllerEvent;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcMeter;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcThermostat;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcVideo;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.ActionType;
@@ -87,8 +86,6 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
 
     private volatile @Nullable NhcSystemInfo2 nhcSystemInfo;
     private volatile @Nullable NhcTimeInfo2 nhcTimeInfo;
-
-    protected final Map<String, NhcVideo2> videoDevices = new ConcurrentHashMap<>();
 
     private volatile boolean initStarted = false;
     private volatile @Nullable CompletableFuture<Boolean> communicationStarted;
@@ -520,7 +517,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
     }
 
     private void addVideoDevice(NhcDevice2 device) {
-        NhcVideo2 nhcVideo = videoDevices.get(device.uuid);
+        NhcVideo2 nhcVideo = (NhcVideo2) videoDevices.get(device.uuid);
         if (nhcVideo != null) {
             nhcVideo.setName(device.name);
         } else {
@@ -567,7 +564,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         NhcThermostat thermostat = thermostats.get(device.uuid);
         NhcMeter meter = meters.get(device.uuid);
         NhcAccess access = accessDevices.get(device.uuid);
-        NhcVideo2 video = videoDevices.get(device.uuid);
+        NhcVideo video = videoDevices.get(device.uuid);
         if (action != null) {
             action.actionRemoved();
             actions.remove(device.uuid);
@@ -597,7 +594,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         NhcThermostat thermostat = thermostats.get(device.uuid);
         NhcMeter meter = meters.get(device.uuid);
         NhcAccess accessDevice = accessDevices.get(device.uuid);
-        NhcVideo2 videoDevice = videoDevices.get(device.uuid);
+        NhcVideo videoDevice = videoDevices.get(device.uuid);
 
         if (action != null) {
             updateActionState((NhcAction2) action, deviceProperties);
@@ -608,7 +605,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         } else if (accessDevice != null) {
             updateAccessState((NhcAccess2) accessDevice, deviceProperties);
         } else if (videoDevice != null) {
-            updateVideoState(videoDevice, deviceProperties);
+            updateVideoState((NhcVideo2) videoDevice, deviceProperties);
         }
     }
 
@@ -1049,7 +1046,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         deviceProperties.add(property);
         device.properties = deviceProperties;
 
-        NhcVideo2 videoDevice = videoDevices.get(accessId);
+        NhcVideo videoDevice = videoDevices.get(accessId);
         if (videoDevice == null) {
             return;
         }

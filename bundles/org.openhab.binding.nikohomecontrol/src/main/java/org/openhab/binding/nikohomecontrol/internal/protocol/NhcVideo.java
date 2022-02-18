@@ -34,21 +34,22 @@ public abstract class NhcVideo {
 
     protected NikoHomeControlCommunication nhcComm;
 
-    private String id;
+    private final String id;
     private String name;
 
     private @Nullable String macAddress;
     protected Map<Integer, @Nullable String> callStatus = new ConcurrentHashMap<>();
     protected Map<Integer, NhcAccess> nhcAccessMap = new ConcurrentHashMap<>();
 
-    private boolean supportsVideoStream = false;
+    private boolean supportsVideoStream;
 
     private @Nullable String ipAddress = null;
     private @Nullable String mjpegUri;
     private @Nullable String tnUri;
 
     protected NhcVideo(String id, String name, @Nullable String macAddress, @Nullable String ipAddress,
-            @Nullable String mjpegUri, @Nullable String tnUri, NikoHomeControlCommunication nhcComm) {
+            @Nullable String mjpegUri, @Nullable String tnUri, boolean supportsVideoStream,
+            NikoHomeControlCommunication nhcComm) {
         this.id = id;
         this.name = name;
         this.nhcComm = nhcComm;
@@ -65,6 +66,7 @@ public abstract class NhcVideo {
         }
         this.mjpegUri = mjpegUri;
         this.tnUri = tnUri;
+        this.supportsVideoStream = supportsVideoStream;
     }
 
     @Nullable
@@ -72,26 +74,50 @@ public abstract class NhcVideo {
         return nhcAccessMap.get(buttonIndex);
     }
 
+    /**
+     * Create a link between a specific video device button and an access device
+     *
+     * @param buttonIndex
+     * @param nhcAccess
+     */
     public void setNhcAccess(int buttonIndex, NhcAccess nhcAccess) {
         nhcAccessMap.put(buttonIndex, nhcAccess);
     }
 
+    /**
+     * Remove the link to an access device for a specific video device button, to be called when an access device is
+     * removed from the system.
+     *
+     * @param buttonIndex
+     */
     public void removeNhcAccess(int buttonIndex) {
         nhcAccessMap.remove(buttonIndex);
     }
 
+    /**
+     * @return MAC address of the video device
+     */
     public @Nullable String getMacAddress() {
         return macAddress;
     }
 
+    /**
+     * @return IP address of the video device
+     */
     public @Nullable String getIpAddress() {
         return ipAddress;
     }
 
+    /**
+     * @return URI for the MJPEG stream on the video device
+     */
     public @Nullable String getMjpegUri() {
         return mjpegUri;
     }
 
+    /**
+     * @return URI for static images on the video device
+     */
     public @Nullable String getTnUri() {
         return tnUri;
     }
@@ -123,12 +149,11 @@ public abstract class NhcVideo {
         this.name = name;
     }
 
+    /**
+     * @return true if the video device supports streaming video
+     */
     public boolean supportsVideoStream() {
         return supportsVideoStream;
-    }
-
-    public void setSupportsVideoStream() {
-        this.supportsVideoStream = true;
     }
 
     /**
@@ -142,11 +167,24 @@ public abstract class NhcVideo {
         logger.debug("video device removed {}, {}", id, name);
     }
 
+    /**
+     * Ring the bell, send bell message to the controller
+     *
+     * @param buttonIndex
+     */
     public void executeBell(int buttonIndex) {
         logger.debug("execute video bell {} for button {}", id, buttonIndex);
         nhcComm.executeVideoBell(id, buttonIndex);
     }
 
+    /**
+     * Update the call state with the call state received for a maximum of 4 buttons on the video device.
+     *
+     * @param callStatus01
+     * @param callStatus02
+     * @param callStatus03
+     * @param callStatus04
+     */
     public abstract void updateState(@Nullable String callStatus01, @Nullable String callStatus02,
             @Nullable String callStatus03, @Nullable String callStatus04);
 }

@@ -60,8 +60,6 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
 
     private volatile @Nullable NhcMeter nhcMeter;
 
-    private String meterId = "";
-
     public NikoHomeControlMeterHandler(Thing thing) {
         super(thing);
     }
@@ -70,7 +68,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
     public void handleCommandSelection(ChannelUID channelUID, Command command) {
         NhcMeter nhcMeter = this.nhcMeter;
         if (nhcMeter == null) {
-            logger.debug("meter with ID {} not initialized", meterId);
+            logger.debug("meter with ID {} not initialized", deviceId);
             return;
         }
 
@@ -102,7 +100,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
     @Override
     public void initialize() {
         NikoHomeControlMeterConfig config = getConfig().as(NikoHomeControlMeterConfig.class);
-        meterId = config.energyMeterId;
+        deviceId = config.energyMeterId;
 
         NikoHomeControlCommunication nhcComm = getCommunication();
         if (nhcComm == null) {
@@ -120,10 +118,10 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 return;
             }
 
-            NhcMeter meter = nhcComm.getMeters().get(meterId);
+            NhcMeter meter = nhcComm.getMeters().get(deviceId);
             if (meter == null) {
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                        "@text/offline.configuration-error.meterId");
+                        "@text/offline.configuration-error.deviceId");
                 return;
             }
 
@@ -138,7 +136,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
 
             nhcMeter = meter;
 
-            logger.debug("meter intialized {}", meterId);
+            logger.debug("meter intialized {}", deviceId);
 
             Bridge bridge = getBridge();
             if ((bridge != null) && (bridge.getStatus() == ThingStatus.ONLINE)) {
@@ -147,11 +145,11 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             }
 
-            nhcComm.startMeter(meterId, config.refresh, config.filterLast, config.offsetStart, config.align);
+            nhcComm.startMeter(deviceId, config.refresh, config.filterLast, config.offsetStart, config.align);
             // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item
             // linked to the channel
             if (isLinked(CHANNEL_POWER)) {
-                nhcComm.startMeterLive(meterId);
+                nhcComm.startMeterLive(deviceId);
             }
         });
     }
@@ -160,9 +158,9 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
     public void dispose() {
         NikoHomeControlCommunication nhcComm = getCommunication();
         if (nhcComm != null) {
-            nhcComm.stopMeterLive(meterId);
-            nhcComm.stopMeter(meterId);
-            NhcMeter meter = nhcComm.getMeters().get(meterId);
+            nhcComm.stopMeterLive(deviceId);
+            nhcComm.stopMeter(deviceId);
+            NhcMeter meter = nhcComm.getMeters().get(deviceId);
             if (meter != null) {
                 meter.unsetEventHandler();
             }
@@ -195,13 +193,13 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
     public void meterPowerEvent(@Nullable Integer power) {
         NhcMeter nhcMeter = this.nhcMeter;
         if (nhcMeter == null) {
-            logger.debug("meter with ID {} not initialized", meterId);
+            logger.debug("meter with ID {} not initialized", deviceId);
             return;
         }
 
         MeterType meterType = nhcMeter.getType();
         if (meterType != MeterType.ENERGY_LIVE) {
-            logger.debug("meter with ID {} does not support live readings", meterId);
+            logger.debug("meter with ID {} does not support live readings", deviceId);
             return;
         }
 
@@ -217,7 +215,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
     public void meterReadingEvent(double meterReading, double meterReadingDay, LocalDateTime lastReadingUTC) {
         NhcMeter nhcMeter = this.nhcMeter;
         if (nhcMeter == null) {
-            logger.debug("meter with ID {} not initialized", meterId);
+            logger.debug("meter with ID {} not initialized", deviceId);
             return;
         }
 
@@ -285,7 +283,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 }
 
                 if (nhcComm.communicationActive()) {
-                    nhcComm.startMeterLive(meterId);
+                    nhcComm.startMeterLive(deviceId);
                     updateStatus(ThingStatus.ONLINE);
                 }
             });
@@ -306,7 +304,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 }
 
                 if (nhcComm.communicationActive()) {
-                    nhcComm.stopMeterLive(meterId);
+                    nhcComm.stopMeterLive(deviceId);
                     // as this is momentary power production/consumption, we set it UNDEF as we do not get readings
                     // anymore
                     updateState(CHANNEL_POWER, UnDefType.UNDEF);

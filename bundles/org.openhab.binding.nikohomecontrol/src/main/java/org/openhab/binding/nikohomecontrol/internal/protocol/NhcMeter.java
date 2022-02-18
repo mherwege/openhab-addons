@@ -37,7 +37,7 @@ public abstract class NhcMeter {
 
     protected NikoHomeControlCommunication nhcComm;
 
-    protected String id;
+    protected final String id;
     protected String name;
     protected MeterType type;
     protected @Nullable LocalDateTime referenceDateUTC;
@@ -55,7 +55,7 @@ public abstract class NhcMeter {
     private volatile @Nullable ScheduledFuture<?> restartTimer;
     private volatile @Nullable ScheduledFuture<?> readingSchedule;
 
-    protected Random r = new Random();
+    private Random r = new Random();
 
     protected NhcMeter(String id, String name, MeterType type, @Nullable LocalDateTime referenceDate,
             @Nullable String location, NikoHomeControlCommunication nhcComm, ScheduledExecutorService scheduler) {

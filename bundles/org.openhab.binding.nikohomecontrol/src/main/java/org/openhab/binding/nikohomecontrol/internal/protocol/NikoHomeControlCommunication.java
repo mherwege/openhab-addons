@@ -48,6 +48,7 @@ public abstract class NikoHomeControlCommunication {
     protected final Map<String, NhcThermostat> thermostats = new ConcurrentHashMap<>();
     protected final Map<String, NhcMeter> meters = new ConcurrentHashMap<>();
     protected final Map<String, NhcAccess> accessDevices = new ConcurrentHashMap<>();
+    protected final Map<String, NhcVideo> videoDevices = new ConcurrentHashMap<>();
 
     protected final NhcControllerEvent handler;
 
@@ -56,7 +57,7 @@ public abstract class NikoHomeControlCommunication {
     // restart attempts
     private volatile int delay = 0;
     private volatile int attempt = 0;
-    protected @Nullable ScheduledFuture<?> scheduledRestart = null;
+    protected volatile @Nullable ScheduledFuture<?> scheduledRestart = null;
 
     protected NikoHomeControlCommunication(NhcControllerEvent handler, ScheduledExecutorService scheduler) {
         this.handler = handler;
@@ -184,6 +185,15 @@ public abstract class NikoHomeControlCommunication {
      */
     public Map<String, NhcAccess> getAccessDevices() {
         return accessDevices;
+    }
+
+    /**
+     * Return all video devices in the Niko Home Control Controller.
+     *
+     * @return <code>Map&ltString, {@link NhcVideo}></code>
+     */
+    public Map<String, NhcVideo> getVideoDevices() {
+        return videoDevices;
     }
 
     /**
