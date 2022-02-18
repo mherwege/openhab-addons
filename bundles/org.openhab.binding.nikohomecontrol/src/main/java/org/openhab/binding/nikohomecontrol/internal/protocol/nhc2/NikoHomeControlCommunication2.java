@@ -479,7 +479,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         } else {
             List<NhcProperty> properties = device.properties;
             if (properties != null) {
-                boolean hasBasicState = properties.stream().map(p -> p.basicState).findAny().isPresent();
+                boolean hasBasicState = properties.stream().anyMatch(p -> (p.basicState != null));
                 if (hasBasicState) {
                     accessType = AccessType.RINGANDCOMEIN;
                 }
