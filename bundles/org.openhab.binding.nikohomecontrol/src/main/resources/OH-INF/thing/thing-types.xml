@@ -196,16 +196,22 @@
 				<label>@text/deviceConfigDeviceIdLabel</label>
 				<description>@text/deviceConfigDeviceIdDescription</description>
 			</parameter>
-			<parameter name="liveRefresh" type="integer">
-				<label>@text/meterConfigLiveRefreshLabel</label>
-				<description>@text/meterConfigLiveRefreshDescription</description>
-				<default>25</default>
-				<advanced>true</advanced>
-			</parameter>
 			<parameter name="refresh" type="integer" min="5">
 				<label>@text/meterConfigRefreshLabel</label>
 				<description>@text/meterConfigRefreshDescription</description>
 				<default>10</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="filterLast" type="boolean">
+				<label>@text/meterConfigFilterLastLabel</label>
+				<description>@text/meterConfigFilterLastDescription</description>
+				<default>true</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="offsetStart" type="boolean">
+				<label>@text/meterConfigOffsetStartLabel</label>
+				<description>@text/meterConfigOffsetStartDescription</description>
+				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
 			<parameter name="align" type="boolean">
@@ -238,6 +244,18 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
+			<parameter name="filterLast" type="boolean">
+				<label>@text/meterConfigFilterLastLabel</label>
+				<description>@text/meterConfigFilterLastDescription</description>
+				<default>true</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="offsetStart" type="boolean">
+				<label>@text/meterConfigOffsetStartLabel</label>
+				<description>@text/meterConfigOffsetStartDescription</description>
+				<default>false</default>
+				<advanced>true</advanced>
+			</parameter>
 			<parameter name="align" type="boolean">
 				<label>@text/meterConfigAlignLabel</label>
 				<description>@text/meterConfigAlignDescription</description>
@@ -268,6 +286,18 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
+			<parameter name="filterLast" type="boolean">
+				<label>@text/meterConfigFilterLastLabel</label>
+				<description>@text/meterConfigFilterLastDescription</description>
+				<default>true</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="offsetStart" type="boolean">
+				<label>@text/meterConfigOffsetStartLabel</label>
+				<description>@text/meterConfigOffsetStartDescription</description>
+				<default>false</default>
+				<advanced>true</advanced>
+			</parameter>
 			<parameter name="align" type="boolean">
 				<label>@text/meterConfigAlignLabel</label>
 				<description>@text/meterConfigAlignDescription</description>
@@ -296,6 +326,18 @@
 				<label>@text/meterConfigRefreshLabel</label>
 				<description>@text/meterConfigRefreshDescription</description>
 				<default>10</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="filterLast" type="boolean">
+				<label>@text/meterConfigFilterLastLabel</label>
+				<description>@text/meterConfigFilterLastDescription</description>
+				<default>true</default>
+				<advanced>true</advanced>
+			</parameter>
+			<parameter name="offsetStart" type="boolean">
+				<label>@text/meterConfigOffsetStartLabel</label>
+				<description>@text/meterConfigOffsetStartDescription</description>
+				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
 			<parameter name="align" type="boolean">

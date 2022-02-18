@@ -251,21 +251,15 @@ public abstract class NhcMeter {
 
     /**
      * Start the flow of energy information from the energy meter. The Niko Home Control energy meter will send power
-     * information every 2s for 30s. This method will retrigger regularly to make sure the information continues
+     * information every 2s for 30s. This method will retrigger every 25s to make sure the information continues
      * flowing. If the information is no longer required, make sure to use the {@link stopMeterLive} method to stop the
      * flow of information.
-     *
-     * @param liveRefresh refresh interval in seconds
      */
-    public void startMeterLive(int liveRefresh) {
+    public void startMeterLive() {
         stopMeterLive();
-        if (liveRefresh > 0) {
-            restartTimer = scheduler.scheduleWithFixedDelay(() -> {
-                nhcComm.retriggerMeterLive(id);
-            }, 0, liveRefresh, TimeUnit.SECONDS);
-        } else {
+        restartTimer = scheduler.scheduleWithFixedDelay(() -> {
             nhcComm.retriggerMeterLive(id);
-        }
+        }, 0, 25, TimeUnit.SECONDS);
     }
 
     /**
@@ -284,16 +278,19 @@ public abstract class NhcMeter {
      * Start receiving meter data at regular intervals. Initial delay will be random between 10 and 100s to reduce risk
      * of overloading controller during initialization.
      *
-     * @param refresh interval between meter queries
+     * @param refresh interval between meter queries in minutes
+     * @param filterLast remove first reading from series to avoid overlap with last value from previous reading
+     * @param offsetStart if true, set start of meter reading 1 minute later than end of previous reading
      * @param align align meter reading start and end time with 10 minute intervals
      */
-    public void startMeter(int refresh, boolean align) {
+    public void startMeter(int refresh, boolean filterLast, boolean offsetStart, boolean align) {
         stopMeter();
         int firstRefreshDelay = 10 + r.nextInt(90);
-        logger.debug("schedule meter data refresh for {} every {} minutes, first refresh in {}s", id, refresh,
-                firstRefreshDelay);
+        logger.debug(
+                "schedule meter data refresh for {} every {} minutes, first refresh in {}s, align on 10 min intervals {}, filter last {}",
+                id, refresh, firstRefreshDelay, align, filterLast);
         readingSchedule = scheduler.scheduleWithFixedDelay(() -> {
-            nhcComm.executeMeter(id, align);
+            nhcComm.executeMeter(id, filterLast, offsetStart, align);
         }, firstRefreshDelay, refresh * 60, TimeUnit.SECONDS);
     }
 

@@ -22,7 +22,8 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 @NonNullByDefault
 public class NikoHomeControlMeterConfig {
     public String energyMeterId = "";
-    public int liveRefresh = 25;
     public int refresh = 10;
-    public boolean aligned = true;
+    public boolean filterLast = true;
+    public boolean offsetStart = false;
+    public boolean align = true;
 }

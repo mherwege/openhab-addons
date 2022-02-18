@@ -217,21 +217,22 @@ public abstract class NikoHomeControlCommunication {
      * callback in {@link NhcMeterEvent}.
      *
      * @param meterId
+     * @param filterLast remove first reading from series to avoid overlap with last value from previous reading
+     * @param offsetStart if true, set start of meter reading 1 minute later than end of previous reading
      * @param align align meter reading start and end time with 10 minute intervals
      */
-    public abstract void executeMeter(String meterId, boolean align);
+    public abstract void executeMeter(String meterId, boolean filterLast, boolean offsetStart, boolean align);
 
     /**
      * Start retrieving energy meter data from Niko Home Control. The method is used to regularly retrigger the
      * information flow. It can be left empty in concrete classes if the power data is flowing continuously.
      *
      * @param meterId
-     * @param liveRefresh retrigger frequency in seconds
      */
-    public void startMeterLive(String meterId, int liveRefresh) {
+    public void startMeterLive(String meterId) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter != null) {
-            meter.startMeterLive(liveRefresh);
+            meter.startMeterLive();
         }
     }
 
@@ -261,12 +262,14 @@ public abstract class NikoHomeControlCommunication {
      *
      * @param meterId
      * @param refresh reading frequency in minutes
+     * @param filterLast remove first reading from series to avoid overlap with last value from previous reading
+     * @param offsetStart if true, set start of meter reading 1 minute later than end of previous reading
      * @param align align meter reading start and end with 10 minute intervals
      */
-    public void startMeter(String meterId, int refresh, boolean align) {
+    public void startMeter(String meterId, int refresh, boolean filterLast, boolean offsetStart, boolean align) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter != null) {
-            meter.startMeter(refresh, align);
+            meter.startMeter(refresh, filterLast, offsetStart, align);
         }
     }
 

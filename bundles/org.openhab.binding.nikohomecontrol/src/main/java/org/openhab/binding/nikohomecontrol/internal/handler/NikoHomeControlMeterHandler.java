@@ -147,11 +147,11 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             }
 
-            nhcComm.startMeter(meterId, config.refresh, config.aligned);
+            nhcComm.startMeter(meterId, config.refresh, config.filterLast, config.offsetStart, config.align);
             // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item
             // linked to the channel
             if (isLinked(CHANNEL_POWER)) {
-                nhcComm.startMeterLive(meterId, config.liveRefresh);
+                nhcComm.startMeterLive(meterId);
             }
         });
     }
@@ -285,8 +285,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 }
 
                 if (nhcComm.communicationActive()) {
-                    NikoHomeControlMeterConfig config = getConfig().as(NikoHomeControlMeterConfig.class);
-                    nhcComm.startMeterLive(meterId, config.liveRefresh);
+                    nhcComm.startMeterLive(meterId);
                     updateStatus(ThingStatus.ONLINE);
                 }
             });

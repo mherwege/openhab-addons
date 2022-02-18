@@ -102,6 +102,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
     private volatile String meterReadingChannel = "";
     private @Nullable volatile LocalDateTime meterReadingEnd;
     private volatile boolean meterReadingInit;
+    private volatile boolean filterLast;
 
     // We keep only 2 gson adapters used to serialize and deserialize all messages sent and received
     protected final Gson gsonOut = new Gson();
@@ -351,7 +352,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
                 cmdExecuteThermostat(((NhcMessageMap1) nhcMessageGson).getData());
             } else if ("getenergydata".equals(cmd)) {
                 cmdGetEnergyData(((NhcMessageList1) nhcMessageGson).getData(), meterReadingChannel, meterReadingEnd,
-                        meterReadingInit);
+                        meterReadingInit, filterLast);
             } else if ("listactions".equals(event)) {
                 eventListActions(((NhcMessageListMap1) nhcMessageGson).getData());
             } else if ("listthermostat".equals(event)) {
@@ -760,7 +761,8 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
         }
     }
 
-    private void cmdGetEnergyData(List<String> data, String id, @Nullable LocalDateTime meterReadingEnd, boolean init) {
+    private void cmdGetEnergyData(List<String> data, String id, @Nullable LocalDateTime meterReadingEnd, boolean init,
+            boolean filterLast) {
         if (id.isEmpty()) {
             logger.debug("received meter data but none requested, ignoring");
             return;
@@ -790,13 +792,15 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
                 meterReadingEnd.atZone(ZoneOffset.UTC).withZoneSameInstant(getTimeZone()).truncatedTo(ChronoUnit.DAYS))
                 / 10;
 
-        logger.trace("received {} individual meter readings for {}, summing up", data.size(), id);
+        logger.trace("received {} individual meter readings for {}, summing up, skipping first value {}", data.size(),
+                id, filterLast);
         try {
             if (init) {
                 reading = data.stream().mapToInt(Integer::parseInt).sum();
                 dayReading = data.stream().skip(beforeDayStart).mapToInt(Integer::parseInt).sum();
             } else {
-                int value = data.stream().mapToInt(Integer::parseInt).sum();
+                int skip = filterLast ? 1 : 0;
+                int value = data.stream().skip(skip).mapToInt(Integer::parseInt).sum();
                 reading = meter.getReadingInt() + value;
                 logger.trace("adding {} to meter {} reading, new reading {}", value, id, reading);
                 if (beforeDayStart > 0) {
@@ -938,7 +942,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
     }
 
     @Override
-    public void executeMeter(String meterId, boolean align) {
+    public void executeMeter(String meterId, boolean filterLast, boolean offsetStart, boolean align) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter == null) {
             return;
@@ -970,6 +974,8 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
             }
 
             try {
+                this.filterLast = filterLast;
+
                 meterReadingInit = false;
 
                 LocalDateTime start = meter.getLastReading();
@@ -980,10 +986,14 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
                         logger.debug("error getting meter data, no meter reference date available");
                         return;
                     }
+                } else if (offsetStart) {
+                    start = start.plusMinutes(1);
                 }
+
                 String readingStart = start.format(DATE_TIME_FORMAT);
                 LocalDateTime end = ZonedDateTime.now().withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
                 if (align) {
+                    logger.trace("aligning end {} to 10 min interval", end.format(DATE_TIME_FORMAT));
                     int minute = (end.getMinute() / 10) * 10;
                     end = end.withMinute(minute);
                 }
