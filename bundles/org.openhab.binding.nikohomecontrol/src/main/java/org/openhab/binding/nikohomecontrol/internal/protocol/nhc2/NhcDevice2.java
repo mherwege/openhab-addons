@@ -94,6 +94,8 @@ class NhcDevice2 {
         String doorlock;
         // fields for video devices
         @Nullable
+        String ipAddress;
+        @Nullable
         String callStatus01;
         @Nullable
         String callStatus02;
@@ -111,13 +113,6 @@ class NhcDevice2 {
         String channel;
         @Nullable
         String meterType;
-        // fields for video devices
-        @Nullable
-        String ipAddress;
-        @Nullable
-        String mjpegUri;
-        @Nullable
-        String tnUri;
     }
 
     static class NhcParameter {
@@ -145,6 +140,11 @@ class NhcDevice2 {
         String declineCallAppliedOnAllDevices;
         @Nullable
         String iconCode;
+        // fields for video devices
+        @Nullable
+        String mjpegUri;
+        @Nullable
+        String tnUri;
     }
 
     String name = "";

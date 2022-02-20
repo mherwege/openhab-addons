@@ -379,8 +379,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
 
         if ("videodoorstation".equals(device.type) || "vds".equals(device.type)) {
             addVideoDevice(device);
-        }
-        if ("accesscontrol".equals(device.model) || "bellbutton".equals(device.model)) {
+        } else if ("accesscontrol".equals(device.model) || "bellbutton".equals(device.model)) {
             addAccessDevice(device, location);
         } else if ("action".equals(device.type) || "virtual".equals(device.type)) {
             addActionDevice(device, location);
@@ -528,9 +527,15 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             List<NhcTrait> traits = device.traits;
             if (traits != null) {
                 macAddress = traits.stream().map(t -> t.macAddress).filter(Objects::nonNull).findFirst().orElse(null);
-                ipAddress = traits.stream().map(t -> t.ipAddress).filter(Objects::nonNull).findFirst().orElse(null);
-                mjpegUri = traits.stream().map(t -> t.mjpegUri).filter(Objects::nonNull).findFirst().orElse(null);
-                tnUri = traits.stream().map(t -> t.tnUri).filter(Objects::nonNull).findFirst().orElse(null);
+            }
+            List<NhcParameter> parameters = device.parameters;
+            if (parameters != null) {
+                mjpegUri = parameters.stream().map(p -> p.mjpegUri).filter(Objects::nonNull).findFirst().orElse(null);
+                tnUri = parameters.stream().map(p -> p.tnUri).filter(Objects::nonNull).findFirst().orElse(null);
+            }
+            List<NhcProperty> properties = device.properties;
+            if (properties != null) {
+                ipAddress = properties.stream().map(p -> p.ipAddress).filter(Objects::nonNull).findFirst().orElse(null);
             }
 
             logger.debug("adding video device {} model {}, {}", device.uuid, device.model, device.name);
@@ -640,8 +645,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             String brightness = dimmerProperty.get().brightness;
             if (brightness != null) {
                 try {
-                    action.setState(Integer.parseInt(brightness));
                     logger.debug("setting action {} internally to {}", action.getId(), dimmerProperty.get().brightness);
+                    action.setState(Integer.parseInt(brightness));
                 } catch (NumberFormatException e) {
                     logger.debug("received invalid brightness value {} for dimmer {}", brightness, action.getId());
                 }
@@ -649,16 +654,16 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         }
 
         if (NHCON.equals(booleanState) || NHCTRUE.equals(booleanState)) {
-            action.setBooleanState(true);
             logger.debug("setting action {} internally to ON", action.getId());
+            action.setBooleanState(true);
         }
     }
 
     private void updateRollershutterState(NhcAction2 action, List<NhcProperty> deviceProperties) {
         deviceProperties.stream().map(p -> p.position).filter(Objects::nonNull).findFirst().ifPresent(position -> {
             try {
-                action.setState(Integer.parseInt(position));
                 logger.debug("setting action {} internally to {}", action.getId(), position);
+                action.setState(Integer.parseInt(position));
             } catch (NumberFormatException e) {
                 logger.trace("received empty or invalid rollershutter {} position info {}", action.getId(), position);
             }
@@ -780,8 +785,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             if (NHCCLOSED.equals(doorLockState)) {
                 state = true;
             }
-            accessDevice.updateDoorLockState(state);
             logger.debug("setting access device {} doorlock to {}", accessDevice.getId(), state);
+            accessDevice.updateDoorLockState(state);
         }
     }
 
@@ -795,9 +800,9 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         String callStatus04 = deviceProperties.stream().map(p -> p.callStatus04).filter(Objects::nonNull).findFirst()
                 .orElse(null);
 
-        videoDevice.updateState(callStatus01, callStatus02, callStatus03, callStatus04);
         logger.debug("setting video device {} call status to {}, {}, {}, {}", videoDevice.getId(), callStatus01,
                 callStatus02, callStatus03, callStatus04);
+        videoDevice.updateState(callStatus01, callStatus02, callStatus03, callStatus04);
     }
 
     @Override

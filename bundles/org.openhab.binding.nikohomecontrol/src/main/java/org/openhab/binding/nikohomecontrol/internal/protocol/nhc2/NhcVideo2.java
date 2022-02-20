@@ -18,6 +18,8 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcVideo;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The {@link NhcVideo2} class represents a Niko Home Control II video door station device. It is used in conjunction
@@ -27,6 +29,8 @@ import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlComm
  */
 @NonNullByDefault
 public class NhcVideo2 extends NhcVideo {
+    private final Logger logger = LoggerFactory.getLogger(NhcVideo2.class);
+
     private final String deviceType;
     private final String deviceTechnology;
     private final String deviceModel;
@@ -69,8 +73,14 @@ public class NhcVideo2 extends NhcVideo {
         callStatus.put(3, callStatus03);
         callStatus.put(4, callStatus04);
 
-        nhcAccessMap.forEach((buttonIndex, access) -> {
-            access.updateBellState(NHCRINGING.equals(callStatus.get(buttonIndex)) ? true : false);
-        });
+        try {
+            logger.trace("updating bell state for all access devices linked to video device {}", getId());
+            nhcAccessMap.forEach((buttonIndex, access) -> {
+                logger.trace("updating bell state for button {} linked to access id {}", buttonIndex, access.getId());
+                access.updateBellState(NHCRINGING.equals(callStatus.get(buttonIndex)) ? true : false);
+            });
+        } catch (NullPointerException e) {
+            logger.trace("null pointer trying to update bell state", e);
+        }
     }
 }
