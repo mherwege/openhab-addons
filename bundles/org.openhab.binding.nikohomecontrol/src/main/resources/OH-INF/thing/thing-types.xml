@@ -546,14 +546,14 @@
 		<state readOnly="true"/>
 	</channel-type>
 
-	<channel-type id="bellButton">
+	<channel-type id="bellbutton">
 		<item-type>Switch</item-type>
 		<label>@text/channelBellButtonLabel</label>
 		<description>@text/channelBellButtonDescription</description>
 		<category>Switch</category>
 		<autoUpdatePolicy>veto</autoUpdatePolicy>
 	</channel-type>
-	<channel-type id="ringAndComeIn">
+	<channel-type id="ringandcomein">
 		<item-type>Switch</item-type>
 		<label>@text/channelRingAndComeInLabel</label>
 		<description>@text/channelRingAndComeInDescription</description>

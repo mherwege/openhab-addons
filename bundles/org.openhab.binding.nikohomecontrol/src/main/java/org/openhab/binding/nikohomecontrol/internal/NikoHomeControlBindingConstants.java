@@ -99,8 +99,8 @@ public class NikoHomeControlBindingConstants {
     public static final String CHANNEL_GAS_LAST = "gaslast";
     public static final String CHANNEL_WATER_LAST = "waterlast";
 
-    public static final String CHANNEL_BELL_BUTTON = "bellButton";
-    public static final String CHANNEL_RING_AND_COME_IN = "ringAndComeIn";
+    public static final String CHANNEL_BELL_BUTTON = "bellbutton";
+    public static final String CHANNEL_RING_AND_COME_IN = "ringandcomein";
     public static final String CHANNEL_LOCK = "lock";
 
     public static final String CHANNEL_ALARM = "alarm";
