@@ -25,5 +25,5 @@ public class NikoHomeControlMeterConfig {
     public int refresh = 10;
     public boolean filterLast = true;
     public boolean offsetStart = false;
-    public boolean align = true;
+    public boolean align = false;
 }

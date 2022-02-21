@@ -217,7 +217,7 @@
 			<parameter name="align" type="boolean">
 				<label>@text/meterConfigAlignLabel</label>
 				<description>@text/meterConfigAlignDescription</description>
-				<default>true</default>
+				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
 		</config-description>
