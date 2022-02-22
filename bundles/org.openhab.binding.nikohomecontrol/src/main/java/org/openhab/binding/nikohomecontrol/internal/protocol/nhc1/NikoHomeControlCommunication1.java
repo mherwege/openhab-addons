@@ -788,22 +788,24 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
 
         int reading;
         int dayReading;
-        long beforeDayStart = Math.max(0, ChronoUnit.MINUTES.between(lastReading.atZone(ZoneOffset.UTC),
-                meterReadingEnd.atZone(ZoneOffset.UTC).withZoneSameInstant(getTimeZone()).truncatedTo(ChronoUnit.DAYS))
-                / 10);
+        ZonedDateTime lastReadingCurrentZone = lastReading.atZone(ZoneOffset.UTC).withZoneSameInstant(getTimeZone());
+        ZonedDateTime meterReadingEndCurrentZone = meterReadingEnd.atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(getTimeZone());
+        boolean dayChange = meterReadingEndCurrentZone.truncatedTo(ChronoUnit.DAYS).isAfter(lastReadingCurrentZone);
+        long beforeDayStart = Math.max(0, ChronoUnit.MINUTES.between(lastReadingCurrentZone,
+                meterReadingEndCurrentZone.truncatedTo(ChronoUnit.DAYS)) / 10);
 
         if (logger.isTraceEnabled()) {
-            logger.trace("last reading at {}", lastReading.atZone(ZoneOffset.UTC));
-            logger.trace("reading end at {}", meterReadingEnd.atZone(ZoneOffset.UTC));
-            logger.trace("meter reading end current timezone at {}",
-                    meterReadingEnd.atZone(ZoneOffset.UTC).withZoneSameInstant(getTimeZone()));
-            logger.trace("meter reading end start of day at {}", meterReadingEnd.atZone(ZoneOffset.UTC)
-                    .withZoneSameInstant(getTimeZone()).truncatedTo(ChronoUnit.DAYS));
+            logger.trace("last reading at {}", lastReadingCurrentZone);
+            logger.trace("reading end at {}", meterReadingEndCurrentZone);
+            logger.trace("meter reading end start of day at {}",
+                    meterReadingEndCurrentZone.truncatedTo(ChronoUnit.DAYS));
+            logger.trace("day change {}", dayChange);
             logger.trace("{} readings are before the day start", beforeDayStart);
-
-            logger.trace("received {} individual meter readings for {}, summing up, skipping first value {}",
-                    data.size(), id, filterLast);
         }
+
+        logger.trace("received {} individual meter readings for {}, summing up, skipping first value {}", data.size(),
+                id, filterLast);
 
         try {
             if (init) {
@@ -814,7 +816,7 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
                 int value = data.stream().skip(skip).mapToInt(Integer::parseInt).sum();
                 reading = meter.getReadingInt() + value;
                 logger.trace("adding {} to meter {} reading, new reading {}", value, id, reading);
-                if (beforeDayStart > 0) {
+                if (dayChange) {
                     dayReading = data.stream().skip(skip + beforeDayStart).mapToInt(Integer::parseInt).sum();
                     logger.trace("meter {} day reading, it's a new day, new reading {}", id, dayReading);
                 } else {
