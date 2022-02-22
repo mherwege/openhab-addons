@@ -68,10 +68,14 @@ public class NhcVideo2 extends NhcVideo {
     @Override
     public void updateState(@Nullable String callStatus01, @Nullable String callStatus02, @Nullable String callStatus03,
             @Nullable String callStatus04) {
-        callStatus.put(1, callStatus01);
-        callStatus.put(2, callStatus02);
-        callStatus.put(3, callStatus03);
-        callStatus.put(4, callStatus04);
+        try {
+            callStatus.put(1, callStatus01);
+            callStatus.put(2, callStatus02);
+            callStatus.put(3, callStatus03);
+            callStatus.put(4, callStatus04);
+        } catch (NullPointerException e) {
+            logger.trace("null pointer trying to store bell state", e);
+        }
 
         try {
             logger.trace("updating bell state for all access devices linked to video device {}", getId());
