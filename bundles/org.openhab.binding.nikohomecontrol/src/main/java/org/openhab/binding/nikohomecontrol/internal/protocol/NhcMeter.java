@@ -284,7 +284,8 @@ public abstract class NhcMeter {
     public void startMeter(int refresh) {
         stopMeter();
         int firstRefreshDelay = 10 + r.nextInt(90);
-        logger.debug("schedule meter data refresh for {} every {} minutes, first refresh in {}s", id, refresh);
+        logger.debug("schedule meter data refresh for {} every {} minutes, first refresh in {}s", id, refresh,
+                firstRefreshDelay);
         readingSchedule = scheduler.scheduleWithFixedDelay(() -> {
             nhcComm.executeMeter(id);
         }, firstRefreshDelay, refresh * 60, TimeUnit.SECONDS);
