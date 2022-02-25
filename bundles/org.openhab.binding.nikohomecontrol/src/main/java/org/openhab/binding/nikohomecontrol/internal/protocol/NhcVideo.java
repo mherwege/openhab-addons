@@ -38,7 +38,7 @@ public abstract class NhcVideo {
     private String name;
 
     private @Nullable String macAddress;
-    protected Map<Integer, @Nullable String> callStatus = new ConcurrentHashMap<>();
+    protected Map<Integer, String> callStatus = new ConcurrentHashMap<>();
     protected Map<Integer, NhcAccess> nhcAccessMap = new ConcurrentHashMap<>();
 
     private boolean supportsVideoStream;
@@ -178,6 +178,22 @@ public abstract class NhcVideo {
     }
 
     /**
+     * @param buttonIndex
+     * @return state of button, values can be Idle, Ringing or Active
+     */
+    public @Nullable String getState(int buttonIndex) {
+        return callStatus.get(buttonIndex);
+    }
+
+    /**
+     * Update the call state with the call state received for a specific button
+     *
+     * @param buttonIndex
+     * @param callStatus
+     */
+    public abstract void updateState(int buttonIndex, @Nullable String callStatus);
+
+    /**
      * Update the call state with the call state received for a maximum of 4 buttons on the video device.
      *
      * @param callStatus01
@@ -185,6 +201,11 @@ public abstract class NhcVideo {
      * @param callStatus03
      * @param callStatus04
      */
-    public abstract void updateState(@Nullable String callStatus01, @Nullable String callStatus02,
-            @Nullable String callStatus03, @Nullable String callStatus04);
+    public void updateState(@Nullable String callStatus01, @Nullable String callStatus02, @Nullable String callStatus03,
+            @Nullable String callStatus04) {
+        updateState(1, callStatus01);
+        updateState(2, callStatus02);
+        updateState(3, callStatus03);
+        updateState(4, callStatus04);
+    }
 }

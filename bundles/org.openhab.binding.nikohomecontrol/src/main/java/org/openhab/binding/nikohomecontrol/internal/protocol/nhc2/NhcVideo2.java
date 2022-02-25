@@ -16,6 +16,7 @@ import static org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeCont
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.nikohomecontrol.internal.protocol.NhcAccess;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NhcVideo;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlCommunication;
 import org.slf4j.Logger;
@@ -66,25 +67,12 @@ public class NhcVideo2 extends NhcVideo {
     }
 
     @Override
-    public void updateState(@Nullable String callStatus01, @Nullable String callStatus02, @Nullable String callStatus03,
-            @Nullable String callStatus04) {
-        try {
-            callStatus.put(1, callStatus01);
-            callStatus.put(2, callStatus02);
-            callStatus.put(3, callStatus03);
-            callStatus.put(4, callStatus04);
-        } catch (NullPointerException e) {
-            logger.trace("null pointer trying to store bell state", e);
-        }
-
-        try {
-            logger.trace("updating bell state for all access devices linked to video device {}", getId());
-            nhcAccessMap.forEach((buttonIndex, access) -> {
-                logger.trace("updating bell state for button {} linked to access id {}", buttonIndex, access.getId());
-                access.updateBellState(NHCRINGING.equals(callStatus.get(buttonIndex)) ? true : false);
-            });
-        } catch (NullPointerException e) {
-            logger.trace("null pointer trying to update bell state", e);
+    public void updateState(int buttonIndex, @Nullable String status) {
+        callStatus.compute(buttonIndex, (k, v) -> status);
+        NhcAccess access = nhcAccessMap.get(buttonIndex);
+        if (access != null) {
+            logger.trace("updating bell state for button {} linked to access id {}", buttonIndex, access.getId());
+            access.updateBellState(NHCRINGING.equals(status) ? true : false);
         }
     }
 }

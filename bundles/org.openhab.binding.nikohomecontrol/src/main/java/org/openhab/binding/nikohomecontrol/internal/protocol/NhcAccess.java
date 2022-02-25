@@ -12,6 +12,8 @@
  */
 package org.openhab.binding.nikohomecontrol.internal.protocol;
 
+import static org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.NHCIDLE;
+
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.nikohomecontrol.internal.protocol.NikoHomeControlConstants.AccessType;
@@ -89,14 +91,26 @@ public abstract class NhcAccess {
     /**
      * Sets a link to the video phone device with the bell button that triggers this access device.
      *
-     * @param nhcVideo
+     * @param nhcVideo if null, link to video device will be removed
      */
     public void setNhcVideo(@Nullable NhcVideo nhcVideo) {
+        NhcVideo currentVideo = this.nhcVideo;
+        if ((currentVideo != null) && (nhcVideo == null)) {
+            currentVideo.updateState(buttonIndex, NHCIDLE);
+        }
         this.nhcVideo = nhcVideo;
         NhcAccessEvent handler = eventHandler;
-        if (handler != null) {
+        if ((handler != null) && (nhcVideo != null)) {
             handler.updateVideoDeviceProperties();
+            nhcVideo.updateState(buttonIndex, nhcVideo.getState(buttonIndex));
         }
+    }
+
+    /**
+     * @return video device linked to access device
+     */
+    public @Nullable NhcVideo getNhcVideo() {
+        return nhcVideo;
     }
 
     /**
