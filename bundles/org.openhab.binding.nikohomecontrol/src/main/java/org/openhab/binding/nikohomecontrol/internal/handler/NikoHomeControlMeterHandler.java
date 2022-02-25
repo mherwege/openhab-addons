@@ -145,7 +145,7 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             }
 
-            nhcComm.startMeter(deviceId, config.refresh, config.filterLast, config.offsetStart, config.align);
+            nhcComm.startMeter(deviceId, config.refresh);
             // Subscribing to power readings starts an intensive data flow, therefore only do it when there is an item
             // linked to the channel
             if (isLinked(CHANNEL_POWER)) {
@@ -206,7 +206,9 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
         if (power == null) {
             updateState(CHANNEL_POWER, UnDefType.UNDEF);
         } else {
-            updateState(CHANNEL_POWER, new QuantityType<>(power, Units.WATT));
+            boolean invert = getConfig().as(NikoHomeControlMeterConfig.class).invert;
+            int value = (invert ? -1 : 1) * power;
+            updateState(CHANNEL_POWER, new QuantityType<>(value, Units.WATT));
         }
         updateStatus(ThingStatus.ONLINE);
     }
@@ -227,23 +229,27 @@ public class NikoHomeControlMeterHandler extends NikoHomeControlBaseHandler impl
         ZonedDateTime lastReading = lastReadingUTC.atZone(ZoneOffset.UTC)
                 .withZoneSameInstant(bridgeHandler.getTimeZone());
 
+        boolean invert = getConfig().as(NikoHomeControlMeterConfig.class).invert;
+        double value = (invert ? -1 : 1) * meterReading;
+        double dayValue = (invert ? -1 : 1) * meterReadingDay;
+
         MeterType meterType = nhcMeter.getType();
         switch (meterType) {
             case ENERGY_LIVE:
             case ENERGY:
-                updateState(CHANNEL_ENERGY, new QuantityType<>(meterReading, KILOWATT_HOUR));
-                updateState(CHANNEL_ENERGY_DAY, new QuantityType<>(meterReadingDay, KILOWATT_HOUR));
+                updateState(CHANNEL_ENERGY, new QuantityType<>(value, KILOWATT_HOUR));
+                updateState(CHANNEL_ENERGY_DAY, new QuantityType<>(dayValue, KILOWATT_HOUR));
                 updateState(CHANNEL_ENERGY_LAST, new DateTimeType(lastReading));
                 updateStatus(ThingStatus.ONLINE);
             case GAS:
-                updateState(CHANNEL_GAS, new QuantityType<>(meterReading, SIUnits.CUBIC_METRE));
-                updateState(CHANNEL_GAS_DAY, new QuantityType<>(meterReadingDay, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_GAS, new QuantityType<>(value, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_GAS_DAY, new QuantityType<>(dayValue, SIUnits.CUBIC_METRE));
                 updateState(CHANNEL_GAS_LAST, new DateTimeType(lastReading));
                 updateStatus(ThingStatus.ONLINE);
                 break;
             case WATER:
-                updateState(CHANNEL_WATER, new QuantityType<>(meterReading, SIUnits.CUBIC_METRE));
-                updateState(CHANNEL_WATER_DAY, new QuantityType<>(meterReadingDay, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_WATER, new QuantityType<>(value, SIUnits.CUBIC_METRE));
+                updateState(CHANNEL_WATER_DAY, new QuantityType<>(dayValue, SIUnits.CUBIC_METRE));
                 updateState(CHANNEL_WATER_LAST, new DateTimeType(lastReading));
                 updateStatus(ThingStatus.ONLINE);
                 break;

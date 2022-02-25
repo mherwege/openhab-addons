@@ -279,18 +279,14 @@ public abstract class NhcMeter {
      * of overloading controller during initialization.
      *
      * @param refresh interval between meter queries in minutes
-     * @param filterLast remove first reading from series to avoid overlap with last value from previous reading
-     * @param offsetStart if true, set start of meter reading 1 minute later than end of previous reading
-     * @param align align meter reading start and end time with 10 minute intervals
+     * @param invert sign of reading
      */
-    public void startMeter(int refresh, boolean filterLast, boolean offsetStart, boolean align) {
+    public void startMeter(int refresh) {
         stopMeter();
         int firstRefreshDelay = 10 + r.nextInt(90);
-        logger.debug(
-                "schedule meter data refresh for {} every {} minutes, first refresh in {}s, align on 10 min intervals {}, filter last {}",
-                id, refresh, firstRefreshDelay, align, filterLast);
+        logger.debug("schedule meter data refresh for {} every {} minutes, first refresh in {}s", id, refresh);
         readingSchedule = scheduler.scheduleWithFixedDelay(() -> {
-            nhcComm.executeMeter(id, filterLast, offsetStart, align);
+            nhcComm.executeMeter(id);
         }, firstRefreshDelay, refresh * 60, TimeUnit.SECONDS);
     }
 

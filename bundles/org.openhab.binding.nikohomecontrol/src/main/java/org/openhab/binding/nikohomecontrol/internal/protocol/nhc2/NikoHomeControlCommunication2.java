@@ -161,7 +161,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             // Wait until we received all devices info to confirm we are active.
             return started.get(5000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            logger.debug("exception waiting for connection start");
+            logger.debug("exception waiting for connection start: {}", e.toString());
             return false;
         }
     }
@@ -953,7 +953,7 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
     }
 
     @Override
-    public void executeMeter(String meterId, boolean filterLast, boolean offsetStart, boolean align) {
+    public void executeMeter(String meterId) {
         // Nothing to do, meter readings not supported in NHC II at this point in time
     }
 

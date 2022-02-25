@@ -139,7 +139,7 @@ The Thing configurations for **Niko Home Control actions, thermostats, energy me
 |---------------|:-----:|:------:|:--------:|----------------------------------|-----------------------------------------------------------------------------------|
 | actionId      |   x   |   x    |     x    | pushButton, onOff, dimmer, blind | unique ID for the action in the controller                                        |
 | step          |   x   |   x    |          | dimmer                           | step value for dimmer increase/decrease actions, 10 by default                    |
-| invert        |   x   |   x    |          | blind                            | inverts rollershutter or blind direction                                          |
+| invert        |   x   |   x    |          | blind, energyMeterLive, energyMeter, gasMeter, waterMeter | inverts rollershutter or blind direction. Inverts sign of meter reading. Default false |
 | thermostatId  |   x   |   x    |     x    | thermostat                       | unique ID for the thermostat in the controller                                    |
 | overruleTime  |   x   |   x    |          | thermostat                       | standard overrule duration in minutes when setting a new setpoint without providing an overrule duration, default value is 60 |
 | energyMeterId |   x   |        |     x    | energyMeterLive, energyMeter, gasMeter, waterMeter | unique ID for the energy meter in the controller                |

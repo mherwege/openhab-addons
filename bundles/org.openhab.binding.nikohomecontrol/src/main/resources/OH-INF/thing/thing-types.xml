@@ -202,21 +202,9 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
-			<parameter name="filterLast" type="boolean">
-				<label>@text/meterConfigFilterLastLabel</label>
-				<description>@text/meterConfigFilterLastDescription</description>
-				<default>true</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="offsetStart" type="boolean">
-				<label>@text/meterConfigOffsetStartLabel</label>
-				<description>@text/meterConfigOffsetStartDescription</description>
-				<default>false</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="align" type="boolean">
-				<label>@text/meterConfigAlignLabel</label>
-				<description>@text/meterConfigAlignDescription</description>
+			<parameter name="invert" type="boolean">
+				<label>@text/meterConfigInvertLabel</label>
+				<description>@text/meterConfigInvertDescription</description>
 				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
@@ -244,21 +232,9 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
-			<parameter name="filterLast" type="boolean">
-				<label>@text/meterConfigFilterLastLabel</label>
-				<description>@text/meterConfigFilterLastDescription</description>
-				<default>true</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="offsetStart" type="boolean">
-				<label>@text/meterConfigOffsetStartLabel</label>
-				<description>@text/meterConfigOffsetStartDescription</description>
-				<default>false</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="align" type="boolean">
-				<label>@text/meterConfigAlignLabel</label>
-				<description>@text/meterConfigAlignDescription</description>
+			<parameter name="invert" type="boolean">
+				<label>@text/meterConfigInvertLabel</label>
+				<description>@text/meterConfigInvertDescription</description>
 				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
@@ -286,21 +262,9 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
-			<parameter name="filterLast" type="boolean">
-				<label>@text/meterConfigFilterLastLabel</label>
-				<description>@text/meterConfigFilterLastDescription</description>
-				<default>true</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="offsetStart" type="boolean">
-				<label>@text/meterConfigOffsetStartLabel</label>
-				<description>@text/meterConfigOffsetStartDescription</description>
-				<default>false</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="align" type="boolean">
-				<label>@text/meterConfigAlignLabel</label>
-				<description>@text/meterConfigAlignDescription</description>
+			<parameter name="invert" type="boolean">
+				<label>@text/meterConfigInvertLabel</label>
+				<description>@text/meterConfigInvertDescription</description>
 				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>
@@ -328,21 +292,9 @@
 				<default>10</default>
 				<advanced>true</advanced>
 			</parameter>
-			<parameter name="filterLast" type="boolean">
-				<label>@text/meterConfigFilterLastLabel</label>
-				<description>@text/meterConfigFilterLastDescription</description>
-				<default>true</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="offsetStart" type="boolean">
-				<label>@text/meterConfigOffsetStartLabel</label>
-				<description>@text/meterConfigOffsetStartDescription</description>
-				<default>false</default>
-				<advanced>true</advanced>
-			</parameter>
-			<parameter name="align" type="boolean">
-				<label>@text/meterConfigAlignLabel</label>
-				<description>@text/meterConfigAlignDescription</description>
+			<parameter name="invert" type="boolean">
+				<label>@text/meterConfigInvertLabel</label>
+				<description>@text/meterConfigInvertDescription</description>
 				<default>false</default>
 				<advanced>true</advanced>
 			</parameter>

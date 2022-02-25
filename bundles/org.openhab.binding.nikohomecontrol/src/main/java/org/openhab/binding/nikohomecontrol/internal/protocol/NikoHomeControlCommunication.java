@@ -227,11 +227,8 @@ public abstract class NikoHomeControlCommunication {
      * callback in {@link NhcMeterEvent}.
      *
      * @param meterId
-     * @param filterLast remove first reading from series to avoid overlap with last value from previous reading
-     * @param offsetStart if true, set start of meter reading 1 minute later than end of previous reading
-     * @param align align meter reading start and end time with 10 minute intervals
      */
-    public abstract void executeMeter(String meterId, boolean filterLast, boolean offsetStart, boolean align);
+    public abstract void executeMeter(String meterId);
 
     /**
      * Start retrieving energy meter data from Niko Home Control. The method is used to regularly retrigger the
@@ -272,14 +269,11 @@ public abstract class NikoHomeControlCommunication {
      *
      * @param meterId
      * @param refresh reading frequency in minutes
-     * @param filterLast remove first reading from series to avoid overlap with last value from previous reading
-     * @param offsetStart if true, set start of meter reading 1 minute later than end of previous reading
-     * @param align align meter reading start and end with 10 minute intervals
      */
-    public void startMeter(String meterId, int refresh, boolean filterLast, boolean offsetStart, boolean align) {
+    public void startMeter(String meterId, int refresh) {
         NhcMeter meter = getMeters().get(meterId);
         if (meter != null) {
-            meter.startMeter(refresh, filterLast, offsetStart, align);
+            meter.startMeter(refresh);
         }
     }
 
