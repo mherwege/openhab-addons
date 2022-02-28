@@ -307,7 +307,7 @@
 		<label>@text/accessLabel</label>
 		<description>@text/acessDescription</description>
 		<channels>
-			<channel id="bellButton" typeId="bellButton"/>
+			<channel id="bellbutton" typeId="bellbutton"/>
 			<channel id="lock" typeId="lock"/>
 		</channels>
 		<config-description>
@@ -324,8 +324,8 @@
 		<label>@text/accessRingAndComeInLabel</label>
 		<description>@text/acessRingAndComeInDescription</description>
 		<channels>
-			<channel id="bellButton" typeId="bellButton"/>
-			<channel id="ringAndComeIn" typeId="ringAndComeIn"/>
+			<channel id="bellbutton" typeId="bellbutton"/>
+			<channel id="ringandcomein" typeId="ringandcomein"/>
 			<channel id="lock" typeId="lock"/>
 		</channels>
 		<config-description>
