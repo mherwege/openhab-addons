@@ -494,7 +494,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
                 buttonId = parameters.stream().map(p -> p.buttonId).filter(Objects::nonNull).findFirst().orElse(null);
             }
 
-            logger.debug("adding access device {} model {}, {}", device.uuid, device.model, device.name);
+            logger.debug("adding access device {} model {} type {}, {}", device.uuid, device.model, accessType,
+                    device.name);
             nhcAccess = new NhcAccess2(device.uuid, device.name, device.type, device.technology, device.model, location,
                     accessType, buttonId, this);
 
@@ -611,6 +612,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
             updateAccessState((NhcAccess2) accessDevice, deviceProperties);
         } else if (videoDevice != null) {
             updateVideoState((NhcVideo2) videoDevice, deviceProperties);
+        } else {
+            logger.trace("No known device for {}", device.uuid);
         }
     }
 
@@ -999,6 +1002,8 @@ public class NikoHomeControlCommunication2 extends NikoHomeControlCommunication
         boolean current = accessDevice.getRingAndComeInState();
         if ((ringAndComeIn && !current) || (!ringAndComeIn && current)) {
             executeAccess(accessId);
+        } else {
+            logger.trace("Not updating ring and come in as state did not change");
         }
     }
 
