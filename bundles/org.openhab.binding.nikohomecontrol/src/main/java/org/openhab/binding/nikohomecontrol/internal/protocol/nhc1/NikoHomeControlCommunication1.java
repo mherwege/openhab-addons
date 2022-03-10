@@ -948,6 +948,11 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
             return;
         }
 
+        if (!communicationActive()) {
+            logger.debug("Communication not active, not getting meter data for {}", meterId);
+            return;
+        }
+
         // only update one meter at a time and do it on a dedicated socket
         synchronized (executeMeterLock) {
             Socket socket = nhcEnergySocket;
@@ -1014,6 +1019,11 @@ public class NikoHomeControlCommunication1 extends NikoHomeControlCommunication 
 
     @Override
     public synchronized void retriggerMeterLive(String meterId) {
+        if (!communicationActive()) {
+            logger.debug("Communication not active, not live getting meter data for {}", meterId);
+            return;
+        }
+
         PrintWriter out = nhcOut;
         if (out != null) {
             NhcMessageCmd1 nhcCmd = new NhcMessageCmd1("stoplive").withChannel(Integer.parseInt(meterId));

@@ -74,7 +74,6 @@ public abstract class NikoHomeControlCommunication {
      */
     public void stopCommunication() {
         stopScheduledRestart();
-        stopAllMeters();
         resetCommunication();
     }
 
@@ -287,7 +286,10 @@ public abstract class NikoHomeControlCommunication {
         }
     }
 
-    private void stopAllMeters() {
+    /**
+     * Stop retrieving meter data from Niko Home Control at a regular interval for all meters.
+     */
+    public void stopAllMeters() {
         for (String meterId : getMeters().keySet()) {
             stopMeter(meterId);
             stopMeterLive(meterId);
