@@ -413,7 +413,6 @@
 			</options>
 		</state>
 	</channel-type>
-	<<<<<<< Upstream, based on origin/main
 	<channel-type id="heatingdemand">
 		<item-type>String</item-type>
 		<label>@text/channelDemandLabel</label>
@@ -438,8 +437,6 @@
 			</options>
 		</state>
 	</channel-type>
-	=======
-	>>>>>>> 22f3a14 NHCI energy meters and NHCII access control
 
 	<channel-type id="power">
 		<item-type>Number:Power</item-type>
