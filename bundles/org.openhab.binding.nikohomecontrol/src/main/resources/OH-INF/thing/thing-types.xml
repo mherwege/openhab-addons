@@ -188,11 +188,11 @@
 		<channels>
 			<channel id="power" typeId="power"/>
 			<channel id="energy" typeId="energy"/>
-			<channel id="energyday" typeId="energy"/>
+			<channel id="energyday" typeId="energyday"/>
 			<channel id="energylast" typeId="measurementtime"/>
 		</channels>
 		<config-description>
-			<parameter name="energyMeterId" type="text" required="true">
+			<parameter name="meterId" type="text" required="true">
 				<label>@text/deviceConfigDeviceIdLabel</label>
 				<description>@text/deviceConfigDeviceIdDescription</description>
 			</parameter>
@@ -222,7 +222,7 @@
 			<channel id="energylast" typeId="measurementtime"/>
 		</channels>
 		<config-description>
-			<parameter name="energyMeterId" type="text" required="true">
+			<parameter name="meterId" type="text" required="true">
 				<label>@text/deviceConfigDeviceIdLabel</label>
 				<description>@text/deviceConfigDeviceIdDescription</description>
 			</parameter>
@@ -244,7 +244,7 @@
 		<supported-bridge-type-refs>
 			<bridge-type-ref id="bridge"/>
 		</supported-bridge-type-refs>
-		<label>@text/gasMeter</label>
+		<label>@text/gasMeterLabel</label>
 		<description>@text/gasMeterDescription</description>
 		<channels>
 			<channel id="gas" typeId="gas"/>
@@ -252,7 +252,7 @@
 			<channel id="gaslast" typeId="measurementtime"/>
 		</channels>
 		<config-description>
-			<parameter name="energyMeterId" type="text" required="true">
+			<parameter name="meterId" type="text" required="true">
 				<label>@text/deviceConfigDeviceIdLabel</label>
 				<description>@text/deviceConfigDeviceIdDescription</description>
 			</parameter>
@@ -305,7 +305,7 @@
 			<bridge-type-ref id="bridge2"/>
 		</supported-bridge-type-refs>
 		<label>@text/accessLabel</label>
-		<description>@text/acessDescription</description>
+		<description>@text/accessDescription</description>
 		<channels>
 			<channel id="bellbutton" typeId="bellbutton"/>
 			<channel id="lock" typeId="lock"/>
@@ -322,7 +322,7 @@
 			<bridge-type-ref id="bridge2"/>
 		</supported-bridge-type-refs>
 		<label>@text/accessRingAndComeInLabel</label>
-		<description>@text/acessRingAndComeInDescription</description>
+		<description>@text/accessRingAndComeInDescription</description>
 		<channels>
 			<channel id="bellbutton" typeId="bellbutton"/>
 			<channel id="ringandcomein" typeId="ringandcomein"/>
@@ -443,49 +443,49 @@
 		<label>@text/channelPowerLabel</label>
 		<description>@text/channelPowerDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.0f %unit%"/>
 	</channel-type>
 	<channel-type id="energy">
 		<item-type>Number:Energy</item-type>
 		<label>@text/channelEnergyLabel</label>
 		<description>@text/channelEnergyDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.1f %unit%"/>
 	</channel-type>
 	<channel-type id="energyday">
 		<item-type>Number:Energy</item-type>
 		<label>@text/channelEnergyDayLabel</label>
 		<description>@text/channelEnergyDayDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.1f %unit%"/>
 	</channel-type>
 	<channel-type id="gas">
 		<item-type>Number:Volume</item-type>
 		<label>@text/channelGasLabel</label>
 		<description>@text/channelGasDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.1f %unit%"/>
 	</channel-type>
 	<channel-type id="gasday">
 		<item-type>Number:Volume</item-type>
 		<label>@text/channelGasDayLabel</label>
 		<description>@text/channelGasDayDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.1f %unit%"/>
 	</channel-type>
 	<channel-type id="water">
 		<item-type>Number:Volume</item-type>
 		<label>@text/channelWaterLabel</label>
 		<description>@text/channelWaterDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.1f %unit%"/>
 	</channel-type>
 	<channel-type id="waterday">
 		<item-type>Number:Volume</item-type>
 		<label>@text/channelWaterDayLabel</label>
 		<description>@text/channelWaterDayDescription</description>
 		<category>Number</category>
-		<state readOnly="true"/>
+		<state readOnly="true" pattern="%.1f %unit%"/>
 	</channel-type>
 	<channel-type id="measurementtime">
 		<item-type>DateTimeType</item-type>

@@ -159,7 +159,7 @@ Note down the `actionId` parameter from the thing, remove it before adding it ag
 Alternatively the `actionId` can be retrieved from the configuration file.
 The file contains a SQLLite database.
 The database contains a table `Action` with column `FifthplayId` corresponding to the required `actionId` parameter.
-The same applies applies for `thermostatId` and `accessId`.
+The same applies applies for `thermostatId`, `meterId` and `accessId`.
 
 An example **action** textual configuration looks like:
 
