@@ -13,9 +13,9 @@
 package org.openhab.binding.mybmw.internal.dto.vehicle;
 
 /**
- * 
+ *
  * derived from the API responses
- * 
+ *
  * @author Martin Grassl - initial contribution
  */
 public class VehicleTireStates {
@@ -54,6 +54,13 @@ public class VehicleTireStates {
 
     public void setRearRight(VehicleTireState rearRight) {
         this.rearRight = rearRight;
+    }
+
+    public boolean isTireStateMeasured() {
+        return (getFrontLeft().getStatus().getTargetPressure() >= 0)
+                || (getFrontRight().getStatus().getTargetPressure() >= 0)
+                || (getRearLeft().getStatus().getTargetPressure() >= 0)
+                || (getRearRight().getStatus().getTargetPressure() >= 0);
     }
 
     @Override

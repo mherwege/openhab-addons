@@ -27,8 +27,6 @@ import org.openhab.binding.mybmw.internal.dto.vehicle.VehicleCapabilities;
 import org.openhab.binding.mybmw.internal.handler.MyBMWBridgeHandler;
 import org.openhab.binding.mybmw.internal.handler.backend.MyBMWProxy;
 import org.openhab.binding.mybmw.internal.handler.backend.NetworkException;
-import org.openhab.binding.mybmw.internal.handler.enums.RemoteService;
-import org.openhab.binding.mybmw.internal.utils.Constants;
 import org.openhab.binding.mybmw.internal.utils.VehicleStatusUtils;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
@@ -114,7 +112,7 @@ public class VehicleDiscovery extends AbstractDiscoveryService implements ThingH
 
     /**
      * this method is called by the bridgeHandler if the list of vehicles was retrieved successfully
-     * 
+     *
      * @param vehicleList
      */
     private void processVehicles(List<Vehicle> vehicleList) {
@@ -186,42 +184,8 @@ public class VehicleDiscovery extends AbstractDiscoveryService implements ThingH
                 vehicleCapabilities.getCapabilitiesAsString(VehicleCapabilities.ENABLED_SUFFIX, true));
         properties.put("servicesDisabled",
                 vehicleCapabilities.getCapabilitiesAsString(VehicleCapabilities.ENABLED_SUFFIX, false));
-
-        // For RemoteServices we need to do it step-by-step
-        StringBuffer remoteServicesEnabled = new StringBuffer();
-        StringBuffer remoteServicesDisabled = new StringBuffer();
-        if (vehicleCapabilities.isLock()) {
-            remoteServicesEnabled.append(RemoteService.DOOR_LOCK.getLabel() + Constants.SEMICOLON);
-        } else {
-            remoteServicesDisabled.append(RemoteService.DOOR_LOCK.getLabel() + Constants.SEMICOLON);
-        }
-        if (vehicleCapabilities.isUnlock()) {
-            remoteServicesEnabled.append(RemoteService.DOOR_UNLOCK.getLabel() + Constants.SEMICOLON);
-        } else {
-            remoteServicesDisabled.append(RemoteService.DOOR_UNLOCK.getLabel() + Constants.SEMICOLON);
-        }
-        if (vehicleCapabilities.isLights()) {
-            remoteServicesEnabled.append(RemoteService.LIGHT_FLASH.getLabel() + Constants.SEMICOLON);
-        } else {
-            remoteServicesDisabled.append(RemoteService.LIGHT_FLASH.getLabel() + Constants.SEMICOLON);
-        }
-        if (vehicleCapabilities.isHorn()) {
-            remoteServicesEnabled.append(RemoteService.HORN_BLOW.getLabel() + Constants.SEMICOLON);
-        } else {
-            remoteServicesDisabled.append(RemoteService.HORN_BLOW.getLabel() + Constants.SEMICOLON);
-        }
-        if (vehicleCapabilities.isVehicleFinder()) {
-            remoteServicesEnabled.append(RemoteService.VEHICLE_FINDER.getLabel() + Constants.SEMICOLON);
-        } else {
-            remoteServicesDisabled.append(RemoteService.VEHICLE_FINDER.getLabel() + Constants.SEMICOLON);
-        }
-        if (vehicleCapabilities.isVehicleFinder()) {
-            remoteServicesEnabled.append(RemoteService.CLIMATE_NOW_START.getLabel() + Constants.SEMICOLON);
-        } else {
-            remoteServicesDisabled.append(RemoteService.CLIMATE_NOW_START.getLabel() + Constants.SEMICOLON);
-        }
-        properties.put("remoteServicesEnabled", remoteServicesEnabled.toString().trim());
-        properties.put("remoteServicesDisabled", remoteServicesDisabled.toString().trim());
+        properties.put("remoteServicesEnabled", vehicleCapabilities.getRemoteServicesAsString(true));
+        properties.put("remoteServicesDisabled", vehicleCapabilities.getRemoteServicesAsString(false));
 
         return properties;
     }

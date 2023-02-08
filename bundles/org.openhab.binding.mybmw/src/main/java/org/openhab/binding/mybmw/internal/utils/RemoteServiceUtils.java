@@ -38,8 +38,9 @@ public class RemoteServiceUtils {
         return Optional.ofNullable(COMMAND_SERVICES.get(command));
     }
 
-    public static List<CommandOption> getOptions(final boolean isElectric) {
-        return Stream.of(RemoteService.values()).map(service -> new CommandOption(service.getId(), service.getLabel()))
+    public static List<CommandOption> getOptions(List<RemoteService> services) {
+        return Stream.of(RemoteService.values()).filter(service -> services.contains(service))
+                .map(service -> new CommandOption(service.getId(), service.getLabel()))
                 .collect(Collectors.toUnmodifiableList());
     }
 }

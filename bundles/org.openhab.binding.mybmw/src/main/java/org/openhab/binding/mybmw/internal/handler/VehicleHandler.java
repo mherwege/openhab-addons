@@ -12,85 +12,7 @@
  */
 package org.openhab.binding.mybmw.internal.handler;
 
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.ADDRESS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_CHARGE_PROFILE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_CHARGE_SESSION;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_CHARGE_STATISTICS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_CHECK_CONTROL;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_DOORS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_LOCATION;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_RANGE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_REMOTE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_SERVICE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_STATUS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_TIRES;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHANNEL_GROUP_VEHICLE_IMAGE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_ENABLED;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_PROFILE_CLIMATE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_PROFILE_CONTROL;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_PROFILE_LIMIT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_PROFILE_MODE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_PROFILE_PREFERENCE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_PROFILE_TARGET;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_REMAINING;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHARGE_STATUS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.CHECK_CONTROL;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DATE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DETAILS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DOORS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DOOR_DRIVER_FRONT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DOOR_DRIVER_REAR;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DOOR_PASSENGER_FRONT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.DOOR_PASSENGER_REAR;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.ENERGY;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.ESTIMATED_FUEL_L_100KM;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.ESTIMATED_FUEL_MPG;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.FRONT_LEFT_CURRENT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.FRONT_LEFT_TARGET;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.FRONT_RIGHT_CURRENT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.FRONT_RIGHT_TARGET;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.GPS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.HEADING;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.HOME_DISTANCE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.HOOD;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.IMAGE_FORMAT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.IMAGE_VIEWPORT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.ISSUE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.LAST_FETCHED;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.LAST_UPDATE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.LOCK;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.MILEAGE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.NAME;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.PLUG_CONNECTION;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RANGE_ELECTRIC;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RANGE_FUEL;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RANGE_HYBRID;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RANGE_RADIUS_ELECTRIC;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RANGE_RADIUS_FUEL;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RANGE_RADIUS_HYBRID;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.RAW;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REAR_LEFT_CURRENT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REAR_LEFT_TARGET;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REAR_RIGHT_CURRENT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REAR_RIGHT_TARGET;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REMAINING_FUEL;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REMOTE_SERVICE_COMMAND;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.REMOTE_STATE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SERVICE_DATE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SERVICE_MILEAGE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SESSIONS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SEVERITY;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SOC;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.STATUS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SUBTITLE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.SUNROOF;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.TITLE;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.TRUNK;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.WINDOWS;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.WINDOW_DOOR_DRIVER_FRONT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.WINDOW_DOOR_DRIVER_REAR;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.WINDOW_DOOR_PASSENGER_FRONT;
-import static org.openhab.binding.mybmw.internal.MyBMWConstants.WINDOW_DOOR_PASSENGER_REAR;
+import static org.openhab.binding.mybmw.internal.MyBMWConstants.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
@@ -104,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.measure.Unit;
 import javax.measure.quantity.Length;
@@ -128,6 +51,7 @@ import org.openhab.binding.mybmw.internal.dto.vehicle.VehicleTireStates;
 import org.openhab.binding.mybmw.internal.dto.vehicle.VehicleWindowsState;
 import org.openhab.binding.mybmw.internal.handler.backend.MyBMWProxy;
 import org.openhab.binding.mybmw.internal.handler.backend.NetworkException;
+import org.openhab.binding.mybmw.internal.handler.backend.ResponseContentAnonymizer;
 import org.openhab.binding.mybmw.internal.utils.ChargingProfileUtils;
 import org.openhab.binding.mybmw.internal.utils.ChargingProfileUtils.TimedChannel;
 import org.openhab.binding.mybmw.internal.utils.ChargingProfileWrapper;
@@ -149,12 +73,16 @@ import org.openhab.core.library.types.StringType;
 import org.openhab.core.library.unit.SIUnits;
 import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Bridge;
+import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
+import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.BaseThingHandler;
 import org.openhab.core.thing.binding.BridgeHandler;
+import org.openhab.core.thing.binding.builder.ChannelBuilder;
+import org.openhab.core.thing.binding.builder.ThingBuilder;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.CommandOption;
 import org.openhab.core.types.RefreshType;
@@ -173,10 +101,13 @@ import org.slf4j.LoggerFactory;
  * @author Norbert Truchsess - edit & send charge profile
  * @author Martin Grassl - refactoring, merge with VehicleChannelHandler
  * @author Mark Herwege - refactoring, V2 API charging
+ * @author Mark Herwege - hide unsupported channels and commands
  */
 @NonNullByDefault
 public class VehicleHandler extends BaseThingHandler {
     private final Logger logger = LoggerFactory.getLogger(VehicleHandler.class);
+
+    private boolean isInitialized = false;
 
     private boolean hasFuel = false;
     private boolean isElectric = false;
@@ -222,8 +153,123 @@ public class VehicleHandler extends BaseThingHandler {
                 || driveTrain.equals(VehicleType.ELECTRIC_REX.toString())
                 || driveTrain.equals(VehicleType.ELECTRIC.toString());
         isHybrid = hasFuel && isElectric;
+    }
 
-        setOptions(CHANNEL_GROUP_REMOTE, REMOTE_SERVICE_COMMAND, RemoteServiceUtils.getOptions(isElectric));
+    private void initializeChannels(VehicleStateContainer vehicleState) {
+
+        List<Channel> excludeChannels = getChannelExclusions(vehicleState.getState(), hasFuel, isElectric);
+        if (!excludeChannels.isEmpty()) {
+            ThingBuilder thingBuilder = editThing();
+            thingBuilder.withoutChannels(excludeChannels);
+            updateThing(thingBuilder.build());
+        }
+        setOptions(CHANNEL_GROUP_REMOTE, REMOTE_SERVICE_COMMAND,
+                RemoteServiceUtils.getOptions(vehicleState.getCapabilities().getRemoteServices(true)));
+    }
+
+    private List<Channel> getChannelExclusions(VehicleState state, boolean hasFuel, boolean isElectric) {
+        ThingUID uid = getThing().getUID();
+        List<Channel> excludedChannels = new ArrayList<>();
+
+        logger.debug("Getting channel exclusions");
+
+        VehicleDoorsState doorsState = state.getDoorsState();
+        boolean isLeftSteering = state.isLeftSteering();
+        if (doorsState.getLeftFront().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(
+                    new ChannelUID(uid, CHANNEL_GROUP_DOORS, isLeftSteering ? DOOR_DRIVER_FRONT : DOOR_PASSENGER_FRONT))
+                    .build());
+        }
+        if (doorsState.getRightFront().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(
+                    new ChannelUID(uid, CHANNEL_GROUP_DOORS, isLeftSteering ? DOOR_PASSENGER_FRONT : DOOR_DRIVER_FRONT))
+                    .build());
+        }
+        if (doorsState.getLeftRear().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(
+                    new ChannelUID(uid, CHANNEL_GROUP_DOORS, isLeftSteering ? DOOR_DRIVER_REAR : DOOR_PASSENGER_REAR))
+                    .build());
+        }
+        if (doorsState.getRightRear().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(
+                    new ChannelUID(uid, CHANNEL_GROUP_DOORS, isLeftSteering ? DOOR_PASSENGER_REAR : DOOR_DRIVER_REAR))
+                    .build());
+        }
+        if (doorsState.getHood().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS, HOOD)).build());
+        }
+        if (doorsState.getTrunk().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS, TRUNK)).build());
+        }
+
+        VehicleWindowsState windowsState = state.getWindowsState();
+        if (windowsState.getLeftFront().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS,
+                    isLeftSteering ? WINDOW_DOOR_DRIVER_FRONT : WINDOW_DOOR_PASSENGER_FRONT)).build());
+        }
+        if (windowsState.getRightFront().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS,
+                    isLeftSteering ? WINDOW_DOOR_PASSENGER_FRONT : WINDOW_DOOR_DRIVER_FRONT)).build());
+        }
+        if (windowsState.getLeftRear().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS,
+                    isLeftSteering ? WINDOW_DOOR_DRIVER_REAR : WINDOW_DOOR_PASSENGER_REAR)).build());
+        }
+        if (windowsState.getRightRear().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS,
+                    isLeftSteering ? WINDOW_DOOR_PASSENGER_REAR : WINDOW_DOOR_DRIVER_REAR)).build());
+        }
+        if (windowsState.getRear().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS, WINDOW_REAR)).build());
+        }
+
+        VehicleRoofState roofState = state.getRoofState();
+        if (roofState.getRoofState().isEmpty()) {
+            excludedChannels.add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_DOORS, SUNROOF)).build());
+        }
+
+        VehicleTireStates tireStates = state.getTireState();
+        if (!tireStates.isTireStateMeasured()) {
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_LEFT_CURRENT)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_LEFT_TARGET)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_RIGHT_CURRENT)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_RIGHT_TARGET)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_LEFT_CURRENT)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_LEFT_TARGET)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_RIGHT_CURRENT)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_RIGHT_TARGET)).build());
+        }
+
+        if (!isElectric) {
+            excludedChannels.addAll(FUEL_STATUS_EXCLUSIONS.stream()
+                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_STATUS, c)).build())
+                    .collect(Collectors.toList()));
+            excludedChannels.addAll(FUEL_RANGE_EXCLUSIONS.stream()
+                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_RANGE, c)).build())
+                    .collect(Collectors.toList()));
+            FUEL_CHANNEL_GROUP_EXCLUSIONS.forEach(g -> excludedChannels.addAll(getThing().getChannelsOfGroup(g)));
+        }
+        if (!hasFuel) {
+            excludedChannels.addAll(ELECTRIC_STATUS_EXCLUSIONS.stream()
+                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_STATUS, c)).build())
+                    .collect(Collectors.toList()));
+            excludedChannels.addAll(ELECTRIC_RANGE_EXCLUSIONS.stream()
+                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_RANGE, c)).build())
+                    .collect(Collectors.toList()));
+            ELECTRIC_CHANNEL_GROUP_EXCLUSIONS.forEach(g -> excludedChannels.addAll(getThing().getChannelsOfGroup(g)));
+        }
+
+        logger.info("Excluding channels: {}",
+                excludedChannels.stream().map(c -> c.getUID().getId()).collect(Collectors.toList()));
+        return excludedChannels;
     }
 
     private void setOptions(final String group, final String id, List<CommandOption> options) {
@@ -233,21 +279,28 @@ public class VehicleHandler extends BaseThingHandler {
     @Override
     public void initialize() {
         logger.trace("xxxVehicleHandler.initialize");
-        updateStatus(ThingStatus.UNKNOWN);
+        isInitialized = false;
         vehicleConfiguration = Optional.of(getConfigAs(MyBMWVehicleConfiguration.class));
 
         Bridge bridge = getBridge();
-        if (bridge != null) {
-            BridgeHandler handler = bridge.getHandler();
-            if (handler != null) {
-                proxy = ((MyBMWBridgeHandler) handler).getMyBmwProxy();
-                remote = Optional.of(new RemoteServiceExecutor(this, proxy.get()));
-            } else {
-                logger.debug("Bridge Handler null");
-            }
-        } else {
+        if (bridge == null) {
             logger.debug("Bridge null");
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED);
+            return;
         }
+        BridgeHandler handler = bridge.getHandler();
+        if (handler == null) {
+            logger.debug("Bridge handler null");
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED);
+            return;
+        }
+        proxy = ((MyBMWBridgeHandler) handler).getMyBmwProxy();
+        if (!proxy.isPresent()) {
+            logger.debug("Proxy not present");
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED);
+            return;
+        }
+        remote = Optional.of(new RemoteServiceExecutor(this, proxy.get()));
 
         imageProperties = new ImageProperties();
         updateChannel(CHANNEL_GROUP_VEHICLE_IMAGE, IMAGE_VIEWPORT, Converter.toTitleCase(imageProperties.viewport),
@@ -275,6 +328,7 @@ public class VehicleHandler extends BaseThingHandler {
         refreshJob.ifPresent(job -> job.cancel(true));
         editTimeout.ifPresent(job -> job.cancel(true));
         remote.ifPresent(RemoteServiceExecutor::cancel);
+        isInitialized = false;
     }
 
     public void getData() {
@@ -286,10 +340,16 @@ public class VehicleHandler extends BaseThingHandler {
                 try {
                     VehicleStateContainer vehicleState = prox.requestVehicleState(config.getVin(),
                             config.getVehicleBrand());
+
+                    if (!isInitialized) {
+                        initializeChannels(vehicleState);
+                    }
+                    isInitialized = true;
+
                     triggerVehicleStatusUpdate(vehicleState, null);
                     stateError = false;
                 } catch (NetworkException e) {
-                    logger.debug("{}", e.toString());
+                    logger.debug("{}", ResponseContentAnonymizer.replaceVin(e.toString(), config.getVin()));
                     updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
                             "Vehicle State Update failed");
                     stateError = true;
@@ -302,14 +362,14 @@ public class VehicleHandler extends BaseThingHandler {
                         updateChargingSessions(prox.requestChargeSessions(config.getVin(), config.getVehicleBrand()),
                                 null);
                     } catch (NetworkException e) {
-                        logger.debug("{}", e.toString());
+                        logger.debug("{}", ResponseContentAnonymizer.replaceVin(e.toString(), config.getVin()));
                     }
                 }
                 if (!stateError && !imageCache.isPresent() && !imageProperties.failLimitReached()) {
                     try {
                         updateImage(prox.requestImage(config.getVin(), config.getVehicleBrand(), imageProperties));
                     } catch (NetworkException e) {
-                        logger.debug("{}", e.toString());
+                        logger.debug("{}", ResponseContentAnonymizer.replaceVin(e.toString(), config.getVin()));
                     }
                 }
             }, () -> {

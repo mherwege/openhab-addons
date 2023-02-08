@@ -80,7 +80,6 @@ public class MyBMWBridgeHandler extends BaseBridgeHandler {
     @Override
     public void initialize() {
         logger.trace("xxxMyBMWBridgeHandler.initialize");
-        updateStatus(ThingStatus.UNKNOWN);
         MyBMWBridgeConfiguration config = getConfigAs(MyBMWBridgeConfiguration.class);
         if (config.language.equals(Constants.LANGUAGE_AUTODETECT)) {
             config.language = localeLanguage;

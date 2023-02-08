@@ -60,11 +60,12 @@ public interface BimmerConstants {
     static final String APP_VERSION_NORTH_AMERICA = "2.12.0(19883)";
     static final String APP_VERSION_ROW = "2.12.0(19883)";
     static final String APP_VERSION_CHINA = "2.3.0(13603)";
+    static final String OS_VERSION = "android(SP1A.210812.016.C1)";
     static final Map<String, String> APP_VERSIONS = Map.of(REGION_NORTH_AMERICA, APP_VERSION_NORTH_AMERICA, REGION_ROW,
             APP_VERSION_ROW, REGION_CHINA, APP_VERSION_CHINA);
     static final String USER_AGENT = "Dart/2.16 (dart:io)";
-    // see const.py of bimmer_constants: user-agent; brand; app_version; region
-    static final String X_USER_AGENT = "android(SP1A.210812.016.C1);%s;%s;%s";
+    // see const.py of bimmer_constants: user-agent; brand; app_version
+    static final String X_USER_AGENT = OS_VERSION + ";%s;%s";
 
     static final String LOGIN_NONCE = "login_nonce";
     static final String AUTHORIZATION_CODE = "authorization_code";
@@ -77,6 +78,9 @@ public interface BimmerConstants {
     // API endpoints
     static final String API_OAUTH_CONFIG = "/eadrax-ucs/v1/presentation/oauth/config";
     static final String API_VEHICLES = "/eadrax-vcs/v4/vehicles";
-    static final String API_REMOTE_SERVICE_BASE_URL = "/eadrax-vrccs/v3/presentation/remote-commands/"; // '/{vin}/{service_type}'
+    static final String API_REMOTE_SERVICE_BASE_URL = "/eadrax-vrccs/v3/presentation/remote-commands/"; // '{vin}/{service_type}'
     static final String API_POI = "/eadrax-dcs/v1/send-to-car/send-to-car";
+    static final String API_IMAGES = "/eadrax-ics/v3/presentation/vehicles/"; // '{vin}/images?carView={viewport}'
+    static final String API_CHARGING_STATISTICS = "/eadrax-chs/v1/charging-statistics"; // '?vin={vin}&currentDate={currentDate}'
+    static final String API_CHARGING_SESSIONS = "/eadrax-chs/v1/charging-sessions"; // '?vin={vin}&maxResults=40&include_date_picker=true'
 }

@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.junit.jupiter.api.Test;
+import org.openhab.binding.mybmw.internal.handler.enums.RemoteService;
 import org.openhab.binding.mybmw.internal.utils.RemoteServiceUtils;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.types.CommandOption;
@@ -40,7 +41,7 @@ public class VehiclePropertiesTest {
     @Test
     public void testRemoteServiceOptions() {
         String commandReference = "[CommandOption [command=light-flash, label=Flash Lights], CommandOption [command=vehicle-finder, label=Vehicle Finder], CommandOption [command=door-lock, label=Door Lock], CommandOption [command=door-unlock, label=Door Unlock], CommandOption [command=horn-blow, label=Horn Blow], CommandOption [command=climate-now-start, label=Start Climate], CommandOption [command=climate-now-stop, label=Stop Climate], CommandOption [command=charge-now, label=Charge]]";
-        List<CommandOption> l = RemoteServiceUtils.getOptions(true);
+        List<CommandOption> l = RemoteServiceUtils.getOptions(List.of(RemoteService.values()));
         assertEquals(commandReference, l.toString(), "Commad Options");
     }
 }

@@ -12,6 +12,7 @@
  */
 package org.openhab.binding.mybmw.internal;
 
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -24,6 +25,7 @@ import org.openhab.core.thing.ThingTypeUID;
  * @author Bernd Weymann - Initial contribution
  * @author Norbert Truchsess - edit & send of charge profile
  * @author Martin Grassl - updated enum values
+ * @author Mark Herwege - list of channels per vehicle type
  */
 @NonNullByDefault
 public interface MyBMWConstants {
@@ -194,7 +196,7 @@ public interface MyBMWConstants {
     static final String REMOTE_SERVICE_COMMAND = "command";
     static final String REMOTE_STATE = "state";
 
-    // TIRES
+    // Tires
     static final String FRONT_LEFT_CURRENT = "fl-current";
     static final String FRONT_LEFT_TARGET = "fl-target";
     static final String FRONT_RIGHT_CURRENT = "fr-current";
@@ -203,4 +205,14 @@ public interface MyBMWConstants {
     static final String REAR_LEFT_TARGET = "rl-target";
     static final String REAR_RIGHT_CURRENT = "rr-current";
     static final String REAR_RIGHT_TARGET = "rr-target";
+
+    // Lists of unsupported channels and channel groups by vehicle type
+    static final List<String> FUEL_CHANNEL_GROUP_EXCLUSIONS = List.of(CHANNEL_GROUP_CHARGE_PROFILE,
+            CHANNEL_GROUP_CHARGE_STATISTICS, CHANNEL_GROUP_CHARGE_SESSION);
+    static final List<String> FUEL_STATUS_EXCLUSIONS = List.of(PLUG_CONNECTION, CHARGE_STATUS, CHARGE_REMAINING);
+    static final List<String> FUEL_RANGE_EXCLUSIONS = List.of(MILEAGE, RANGE_ELECTRIC, SOC, RANGE_RADIUS_ELECTRIC);
+    static final List<String> ELECTRIC_CHANNEL_GROUP_EXCLUSIONS = List.of();
+    static final List<String> ELECTRIC_STATUS_EXCLUSIONS = List.of();
+    static final List<String> ELECTRIC_RANGE_EXCLUSIONS = List.of(MILEAGE, RANGE_FUEL, REMAINING_FUEL,
+            ESTIMATED_FUEL_L_100KM, ESTIMATED_FUEL_MPG, RANGE_RADIUS_FUEL);
 }

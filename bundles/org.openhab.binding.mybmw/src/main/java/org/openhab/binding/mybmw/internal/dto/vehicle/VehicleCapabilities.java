@@ -15,8 +15,10 @@ package org.openhab.binding.mybmw.internal.dto.vehicle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.openhab.binding.mybmw.internal.dto.charge.RemoteChargingCommands;
+import org.openhab.binding.mybmw.internal.handler.enums.RemoteService;
 import org.openhab.binding.mybmw.internal.utils.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,7 +154,7 @@ public class VehicleCapabilities {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see java.lang.Object#toString()
      */
 
@@ -190,7 +192,7 @@ public class VehicleCapabilities {
 
     /**
      * returns a list of capabilities filtered by the provided suffix and the enabled requirement
-     * 
+     *
      * @param suffix
      * @param enabled
      * @return
@@ -229,5 +231,46 @@ public class VehicleCapabilities {
                 });
 
         return l;
+    }
+
+    public List<RemoteService> getRemoteServices(boolean enabled) {
+        List<RemoteService> services = new ArrayList<>();
+        if ((enabled && isLock()) || (!enabled && !isLock())) {
+            services.add(RemoteService.DOOR_LOCK);
+        }
+        if ((enabled && isUnlock()) || (!enabled && !isUnlock())) {
+            services.add(RemoteService.DOOR_UNLOCK);
+        }
+        if ((enabled && isLights()) || (!enabled && !isLights())) {
+            services.add(RemoteService.LIGHT_FLASH);
+        }
+        if ((enabled && isHorn()) || (!enabled && !isHorn())) {
+            services.add(RemoteService.HORN_BLOW);
+        }
+        if ((enabled && isVehicleFinder()) || (!enabled && !isVehicleFinder())) {
+            services.add(RemoteService.VEHICLE_FINDER);
+        }
+        if ((enabled && isClimateNow()) || (!enabled && !isClimateNow())) {
+            services.add(RemoteService.CLIMATE_NOW_START);
+        }
+        if ((enabled && !remoteChargingCommands.getChargingControl().isEmpty())
+                || (!enabled && remoteChargingCommands.getChargingControl().isEmpty())) {
+            services.add(RemoteService.CHARGE_NOW);
+        }
+        return services;
+    }
+
+    public String getRemoteServicesAsString(boolean enabled) {
+        StringBuffer remoteServicesAsString = new StringBuffer();
+        List<String> remoteServicesAsStringList = getRemoteServices(enabled).stream().map(RemoteService::getLabel)
+                .collect(Collectors.toUnmodifiableList());
+
+        for (String serviceEntry : remoteServicesAsStringList) {
+            if (remoteServicesAsString.length() > 0) {
+                remoteServicesAsString.append(Constants.SEMICOLON);
+            }
+            remoteServicesAsString.append(serviceEntry);
+        }
+        return remoteServicesAsString.toString();
     }
 }

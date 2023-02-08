@@ -61,7 +61,7 @@ In the right picture can see in *remoteServicesEnabled* e.g. the *Door Lock* and
 This ensures channel group [Remote Services](#remote-services) is supporting door lock and unlock remote control.
 
 In *Services Supported* the entry *ChargingHistory* is mentioned.
-So it's valid to connect channel group [Charge Sessions](#charge-sessions) in order to display your last charging sessions.
+So the channel group [Charge Sessions](#charge-sessions) will be available in order to display your last charging sessions.
 
 | Property Key           | Property Value      |  Supported Channel Groups    |
 |------------------------|---------------------|------------------------------|
@@ -134,6 +134,7 @@ There are many channels available for each vehicle.
 For better overview they are clustered in different channel groups.
 They differ for each vehicle type, build-in sensors and activated services.
 
+Channels are only available when your vehicle supports the functionality.
 
 ### Thing Channel Groups 
 
@@ -141,7 +142,7 @@ They differ for each vehicle type, build-in sensors and activated services.
 |----------------------------------|---------------------------------------------------|------|------|---------|-----|
 | [status](#vehicle-status)        | Overall vehicle status                            |  X   |  X   |    X    |  X  |
 | [range](#range-data)             | Provides mileage, range and charge / fuel levels  |  X   |  X   |    X    |  X  |
-| [doors](#doors-details)          | Detials of all doors and windows                  |  X   |  X   |    X    |  X  |
+| [doors](#doors-details)          | Details of all doors and windows                  |  X   |  X   |    X    |  X  |
 | [check](#check-control)          | Shows current active CheckControl messages        |  X   |  X   |    X    |  X  |
 | [service](#services)             | Future vehicle service schedules                  |  X   |  X   |    X    |  X  |
 | [location](#location)            | Coordinates and heading of the vehicle            |  X   |  X   |    X    |  X  |
@@ -152,6 +153,7 @@ They differ for each vehicle type, build-in sensors and activated services.
 | [tires](#tire-pressure)          | Current and wanted pressure for all tires         |  X   |  X   |    X    |  X  |
 | [image](#image)                  | Provides an image of your vehicle                 |  X   |  X   |    X    |  X  |
 
+Channel groups are only available when your vehicle supports channels in the group.
 
 #### Vehicle Status
 
@@ -391,7 +393,7 @@ Charging options with date and time for preferred time windows and charging mode
 * Channel Group ID is **profile**
 * Available for electric and hybrid vehicles
 * Read access for UI. 
-* There are 4 timers *T1, T2, T3 and T4* available. Replace *X* with number 1,2 or 3 to target the correct timer
+* There are 4 timers *T1, T2, T3 and T4* available. Replace *X* with number 1,2, 3 or 4 to target the correct timer
 
 | Channel Label              | Channel ID                | Type     | 
 |----------------------------|---------------------------|----------| 
