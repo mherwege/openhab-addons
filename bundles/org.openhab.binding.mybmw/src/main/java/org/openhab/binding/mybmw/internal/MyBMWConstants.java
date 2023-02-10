@@ -12,7 +12,6 @@
  */
 package org.openhab.binding.mybmw.internal;
 
-import java.util.List;
 import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -205,14 +204,4 @@ public interface MyBMWConstants {
     static final String REAR_LEFT_TARGET = "rl-target";
     static final String REAR_RIGHT_CURRENT = "rr-current";
     static final String REAR_RIGHT_TARGET = "rr-target";
-
-    // Lists of unsupported channels and channel groups by vehicle type
-    static final List<String> FUEL_CHANNEL_GROUP_EXCLUSIONS = List.of(CHANNEL_GROUP_CHARGE_PROFILE,
-            CHANNEL_GROUP_CHARGE_STATISTICS, CHANNEL_GROUP_CHARGE_SESSION);
-    static final List<String> FUEL_STATUS_EXCLUSIONS = List.of(PLUG_CONNECTION, CHARGE_STATUS, CHARGE_REMAINING);
-    static final List<String> FUEL_RANGE_EXCLUSIONS = List.of(MILEAGE, RANGE_ELECTRIC, SOC, RANGE_RADIUS_ELECTRIC);
-    static final List<String> ELECTRIC_CHANNEL_GROUP_EXCLUSIONS = List.of();
-    static final List<String> ELECTRIC_STATUS_EXCLUSIONS = List.of();
-    static final List<String> ELECTRIC_RANGE_EXCLUSIONS = List.of(MILEAGE, RANGE_FUEL, REMAINING_FUEL,
-            ESTIMATED_FUEL_L_100KM, ESTIMATED_FUEL_MPG, RANGE_RADIUS_FUEL);
 }

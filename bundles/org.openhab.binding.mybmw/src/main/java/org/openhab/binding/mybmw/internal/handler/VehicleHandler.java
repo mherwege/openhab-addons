@@ -248,25 +248,6 @@ public class VehicleHandler extends BaseThingHandler {
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_RIGHT_TARGET)).build());
         }
 
-        if (!isElectric) {
-            excludedChannels.addAll(FUEL_STATUS_EXCLUSIONS.stream()
-                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_STATUS, c)).build())
-                    .collect(Collectors.toList()));
-            excludedChannels.addAll(FUEL_RANGE_EXCLUSIONS.stream()
-                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_RANGE, c)).build())
-                    .collect(Collectors.toList()));
-            FUEL_CHANNEL_GROUP_EXCLUSIONS.forEach(g -> excludedChannels.addAll(getThing().getChannelsOfGroup(g)));
-        }
-        if (!hasFuel) {
-            excludedChannels.addAll(ELECTRIC_STATUS_EXCLUSIONS.stream()
-                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_STATUS, c)).build())
-                    .collect(Collectors.toList()));
-            excludedChannels.addAll(ELECTRIC_RANGE_EXCLUSIONS.stream()
-                    .map(c -> ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_RANGE, c)).build())
-                    .collect(Collectors.toList()));
-            ELECTRIC_CHANNEL_GROUP_EXCLUSIONS.forEach(g -> excludedChannels.addAll(getThing().getChannelsOfGroup(g)));
-        }
-
         logger.info("Excluding channels: {}",
                 excludedChannels.stream().map(c -> c.getUID().getId()).collect(Collectors.toList()));
         return excludedChannels;
