@@ -10,7 +10,7 @@
 	<channel-type id="profile-mode-channel">
 		<item-type>String</item-type>
 		<label>Charge Mode</label>
-		<description>Mode for selecting immediate or delyed charging</description>
+		<description>Mode for selecting immediate or delayed charging</description>
 		<command>
 			<options>
 				<option value="immediateCharging">Immediate Charging</option>
