@@ -248,7 +248,7 @@ public class VehicleHandler extends BaseThingHandler {
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_RIGHT_TARGET)).build());
         }
 
-        logger.info("Excluding channels: {}",
+        logger.debug("Excluding channels: {}",
                 excludedChannels.stream().map(c -> c.getUID().getId()).collect(Collectors.toList()));
         return excludedChannels;
     }
