@@ -12,42 +12,8 @@
  */
 package org.openhab.binding.mybmw.internal.handler.auth;
 
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.API_OAUTH_CONFIG;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.APP_VERSIONS;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.AUTHORIZATION_CODE;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.AUTH_PROVIDER;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.BRAND_BMW;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.CHINA_LOGIN;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.CHINA_PUBLIC_KEY;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.EADRAX_SERVER_MAP;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.LOGIN_NONCE;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.OAUTH_ENDPOINT;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.OCP_APIM_KEYS;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.REGION_CHINA;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.REGION_NORTH_AMERICA;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.REGION_ROW;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.USER_AGENT;
-import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.X_USER_AGENT;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.AUTHORIZATION;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.CLIENT_ID;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.CODE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.CODE_CHALLENGE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.CODE_CHALLENGE_METHOD;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.CODE_VERIFIER;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.CONTENT_TYPE_URL_ENCODED;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.GRANT_TYPE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.HEADER_ACP_SUBSCRIPTION_KEY;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.HEADER_BMW_CORRELATION_ID;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.HEADER_X_CORRELATION_ID;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.HEADER_X_IDENTITY_PROVIDER;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.HEADER_X_USER_AGENT;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.NONCE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.PASSWORD;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.REDIRECT_URI;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.RESPONSE_TYPE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.SCOPE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.STATE;
-import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.USERNAME;
+import static org.openhab.binding.mybmw.internal.utils.BimmerConstants.*;
+import static org.openhab.binding.mybmw.internal.utils.HTTPConstants.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;

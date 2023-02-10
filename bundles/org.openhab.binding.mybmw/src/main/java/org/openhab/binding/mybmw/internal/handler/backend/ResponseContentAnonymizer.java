@@ -26,7 +26,7 @@ import org.eclipse.jdt.annotation.Nullable;
  * @author Mark Herwege - extended log anonymization
  */
 @NonNullByDefault
-public interface ResponseContentAnonymizer {
+public class ResponseContentAnonymizer {
 
     static final String ANONYMOUS_VIN = "anonymousVin";
     static final String VIN_PATTERN = "\"vin\":";
@@ -236,7 +236,8 @@ public interface ResponseContentAnonymizer {
         return replacedString.toString();
     }
 
-    static @Nullable String replaceVin(@Nullable String stringToBeReplaced, @Nullable String vin) {
+    @Nullable
+    public static String replaceVin(@Nullable String stringToBeReplaced, @Nullable String vin) {
         if (stringToBeReplaced == null) {
             return null;
         }

@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * @author Martin Grassl - extract some methods to other classes
  */
 @NonNullByDefault
-public interface Converter {
+public class Converter {
     static final Logger LOGGER = LoggerFactory.getLogger(Converter.class);
 
     static final String DATE_INPUT_PATTERN_STRING = "yyyy-MM-dd'T'HH:mm:ss";
@@ -50,7 +50,7 @@ public interface Converter {
     static final String SPLIT_HYPHEN = "-";
     static final String SPLIT_BRACKET = "\\(";
 
-    static State zonedToLocalDateTime(@Nullable String input) {
+    public static State zonedToLocalDateTime(@Nullable String input) {
         if (input != null && !input.isEmpty()) {
             try {
                 String dateString = ZonedDateTime.parse(input).withZoneSameInstant(ZoneId.systemDefault())
@@ -70,11 +70,11 @@ public interface Converter {
      * - string is Capitalized
      * - null is empty string
      * - single character remains
-     * 
+     *
      * @param input
      * @return
      */
-    static String toTitleCase(@Nullable String input) {
+    public static String toTitleCase(@Nullable String input) {
         if (input == null || input.isEmpty()) {
             return toTitleCase(Constants.UNDEF);
         } else if (input.length() == 1) {
@@ -114,7 +114,7 @@ public interface Converter {
      * @param destinationLongitude
      * @return distance
      */
-    static double measureDistance(double sourceLatitude, double sourceLongitude, double destinationLatitude,
+    public static double measureDistance(double sourceLatitude, double sourceLongitude, double destinationLatitude,
             double destinationLongitude) {
         double earthRadius = 6378.137; // Radius of earth in KM
         double dLat = destinationLatitude * Math.PI / 180 - sourceLatitude * Math.PI / 180;
@@ -148,17 +148,17 @@ public interface Converter {
      * @param range
      * @return mapping from air-line distance to "real road" distance
      */
-    static int guessRangeRadius(double range) {
+    public static int guessRangeRadius(double range) {
         return (int) (range * 0.8);
     }
 
     /**
      * checks if a string is a valid integer
-     * 
+     *
      * @param fullString
      * @return
      */
-    static int parseIntegerString(String fullString) {
+    public static int parseIntegerString(String fullString) {
         int index = -1;
         try {
             index = Integer.parseInt(fullString);
@@ -167,7 +167,7 @@ public interface Converter {
         return index;
     }
 
-    static String getRandomString(int size) {
+    public static String getRandomString(int size) {
         int leftLimit = 97; // letter 'a'
         int rightLimit = 122; // letter 'z'
         Random random = new Random();
@@ -178,7 +178,7 @@ public interface Converter {
         return generatedString;
     }
 
-    static State getConnectionState(boolean connected) {
+    public static State getConnectionState(boolean connected) {
         if (connected) {
             return StringType.valueOf(Constants.CONNECTED);
         } else {
@@ -186,7 +186,7 @@ public interface Converter {
         }
     }
 
-    static String getCurrentISOTime() {
+    public static String getCurrentISOTime() {
         Date date = new Date(System.currentTimeMillis());
         synchronized (ISO_FORMATTER) {
             ISO_FORMATTER.setTimeZone(TimeZone.getTimeZone("UTC"));

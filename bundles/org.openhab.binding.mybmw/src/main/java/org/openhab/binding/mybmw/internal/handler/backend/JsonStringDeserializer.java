@@ -35,7 +35,7 @@ import com.google.gson.JsonSyntaxException;
  * @author Martin Grassl - initial contribution
  */
 @NonNullByDefault
-public interface JsonStringDeserializer {
+public class JsonStringDeserializer {
 
     static final Logger LOGGER = LoggerFactory.getLogger(JsonStringDeserializer.class);
 
