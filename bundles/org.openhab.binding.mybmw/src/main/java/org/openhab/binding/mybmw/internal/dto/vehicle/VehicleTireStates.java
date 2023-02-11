@@ -63,6 +63,13 @@ public class VehicleTireStates {
                 || (getRearRight().getStatus().getTargetPressure() >= 0);
     }
 
+    public boolean hasTireStateTarget() {
+        return (getFrontLeft().getStatus().getCurrentPressure() >= 0)
+                || (getFrontRight().getStatus().getCurrentPressure() >= 0)
+                || (getRearLeft().getStatus().getCurrentPressure() >= 0)
+                || (getRearRight().getStatus().getCurrentPressure() >= 0);
+    }
+
     @Override
     public String toString() {
         return "VehicleTireStates [frontLeft=" + frontLeft + ", frontRight=" + frontRight + ", rearLeft=" + rearLeft

@@ -233,17 +233,19 @@ public class VehicleHandler extends BaseThingHandler {
             excludedChannels
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_LEFT_CURRENT)).build());
             excludedChannels
-                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_LEFT_TARGET)).build());
-            excludedChannels
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_RIGHT_CURRENT)).build());
-            excludedChannels
-                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_RIGHT_TARGET)).build());
             excludedChannels
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_LEFT_CURRENT)).build());
             excludedChannels
-                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_LEFT_TARGET)).build());
-            excludedChannels
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_RIGHT_CURRENT)).build());
+        }
+        if (!tireStates.hasTireStateTarget()) {
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_LEFT_TARGET)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, FRONT_RIGHT_TARGET)).build());
+            excludedChannels
+                    .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_LEFT_TARGET)).build());
             excludedChannels
                     .add(ChannelBuilder.create(new ChannelUID(uid, CHANNEL_GROUP_TIRES, REAR_RIGHT_TARGET)).build());
         }
