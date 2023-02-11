@@ -26,7 +26,9 @@ import org.eclipse.jdt.annotation.Nullable;
  * @author Mark Herwege - extended log anonymization
  */
 @NonNullByDefault
-public class ResponseContentAnonymizer {
+public final class ResponseContentAnonymizer {
+    private ResponseContentAnonymizer() {
+    }
 
     static final String ANONYMOUS_VIN = "anonymousVin";
     static final String VIN_PATTERN = "\"vin\":";

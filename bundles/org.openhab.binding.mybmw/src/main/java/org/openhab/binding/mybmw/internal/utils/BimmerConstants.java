@@ -28,7 +28,10 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  * @author Martin Grassl - update to v2 API
  */
 @NonNullByDefault
-public class BimmerConstants {
+public final class BimmerConstants {
+
+    private BimmerConstants() {
+    }
 
     public static final String REGION_NORTH_AMERICA = "NORTH_AMERICA";
     public static final String REGION_CHINA = "CHINA";

@@ -30,6 +30,8 @@ import org.openhab.core.types.CommandOption;
  */
 @NonNullByDefault
 public class RemoteServiceUtils {
+    private RemoteServiceUtils() {
+    }
 
     private static final Map<String, RemoteService> COMMAND_SERVICES = Stream.of(RemoteService.values())
             .collect(Collectors.toUnmodifiableMap(RemoteService::getId, service -> service));

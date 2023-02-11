@@ -35,7 +35,10 @@ import org.openhab.core.types.UnDefType;
  * @author Martin Grassl - rename drivetrain options
  */
 @NonNullByDefault
-public class Constants {
+public final class Constants {
+    private Constants() {
+    }
+
     // For Vehicle Status
     public static final String NO_ENTRIES = "-";
     public static final String OPEN = "Open";

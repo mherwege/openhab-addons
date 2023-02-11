@@ -39,6 +39,9 @@ import org.slf4j.LoggerFactory;
  */
 @NonNullByDefault
 public class Converter {
+    private Converter() {
+    }
+
     static final Logger LOGGER = LoggerFactory.getLogger(Converter.class);
 
     static final String DATE_INPUT_PATTERN_STRING = "yyyy-MM-dd'T'HH:mm:ss";

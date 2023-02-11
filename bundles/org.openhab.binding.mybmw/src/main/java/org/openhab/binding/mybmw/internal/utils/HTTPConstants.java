@@ -21,7 +21,10 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  * @author Martin Grassl - added image content type
  */
 @NonNullByDefault
-public class HTTPConstants {
+public final class HTTPConstants {
+    private HTTPConstants() {
+    }
+
     public static final int HTTP_TIMEOUT_SEC = 10;
 
     public static final String CONTENT_TYPE_URL_ENCODED = "application/x-www-form-urlencoded";

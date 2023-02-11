@@ -36,6 +36,8 @@ import com.google.gson.JsonSyntaxException;
  */
 @NonNullByDefault
 public class JsonStringDeserializer {
+    private JsonStringDeserializer() {
+    }
 
     static final Logger LOGGER = LoggerFactory.getLogger(JsonStringDeserializer.class);
 

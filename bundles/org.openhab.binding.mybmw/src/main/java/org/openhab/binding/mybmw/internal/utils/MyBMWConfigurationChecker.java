@@ -16,14 +16,17 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.openhab.binding.mybmw.internal.MyBMWBridgeConfiguration;
 
 /**
- * 
+ *
  * checks if the configuration is valid
- * 
+ *
  * @author Bernd Weymann - Initial contribution
  * @author Martin Grassl - extracted to own class
  */
 @NonNullByDefault
-public final class MyBMWConfigurationChecker {
+public class MyBMWConfigurationChecker {
+    private MyBMWConfigurationChecker() {
+    }
+
     public static boolean checkConfiguration(MyBMWBridgeConfiguration config) {
         if (Constants.EMPTY.equals(config.userName) || Constants.EMPTY.equals(config.password)) {
             return false;

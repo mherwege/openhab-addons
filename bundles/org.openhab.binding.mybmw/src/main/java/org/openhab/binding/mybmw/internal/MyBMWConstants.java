@@ -27,7 +27,10 @@ import org.openhab.core.thing.ThingTypeUID;
  * @author Mark Herwege - list of channels per vehicle type
  */
 @NonNullByDefault
-public class MyBMWConstants {
+public final class MyBMWConstants {
+
+    private MyBMWConstants() {
+    }
 
     public static final String BINDING_ID = "mybmw";
 

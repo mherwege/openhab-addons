@@ -33,11 +33,14 @@ import org.slf4j.LoggerFactory;
  */
 @NonNullByDefault
 public class VehicleStatusUtils {
+    private VehicleStatusUtils() {
+    }
+
     public static final Logger LOGGER = LoggerFactory.getLogger(VehicleStatusUtils.class);
 
     /**
      * the date can be empty
-     * 
+     *
      * @param requiredServices
      * @return
      */
@@ -62,7 +65,7 @@ public class VehicleStatusUtils {
 
     /**
      * the mileage can be empty
-     * 
+     *
      * @param requiredServices
      * @return
      */

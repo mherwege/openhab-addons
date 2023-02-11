@@ -32,6 +32,9 @@ import org.openhab.binding.mybmw.internal.utils.ChargingProfileWrapper.ProfileKe
 @NonNullByDefault
 public class ChargingProfileUtils {
 
+    private ChargingProfileUtils() {
+    }
+
     // Charging
     public static class TimedChannel {
         public final String time;
