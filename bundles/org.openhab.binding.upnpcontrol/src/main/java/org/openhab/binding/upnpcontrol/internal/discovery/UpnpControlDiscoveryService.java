@@ -16,7 +16,6 @@ import static org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstan
 
 import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +31,6 @@ import org.jupnp.model.meta.RemoteService;
 import org.jupnp.model.types.UDN;
 import org.jupnp.registry.Registry;
 import org.jupnp.registry.RegistryListener;
-import org.jupnp.transport.RouterException;
 import org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstants;
 import org.openhab.binding.upnpcontrol.internal.util.UpnpControlUtil;
 import org.openhab.core.config.discovery.AbstractDiscoveryService;
@@ -41,9 +39,6 @@ import org.openhab.core.config.discovery.DiscoveryResultBuilder;
 import org.openhab.core.config.discovery.DiscoveryService;
 import org.openhab.core.i18n.LocaleProvider;
 import org.openhab.core.i18n.TranslationProvider;
-import org.openhab.core.net.CidrAddress;
-import org.openhab.core.net.NetworkAddressChangeListener;
-import org.openhab.core.net.NetworkAddressService;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.ThingUID;
 import org.osgi.service.component.annotations.Activate;
@@ -59,8 +54,7 @@ import org.slf4j.LoggerFactory;
  */
 @Component(service = DiscoveryService.class, configurationPid = "discovery.upnpcontrol")
 @NonNullByDefault
-public class UpnpControlDiscoveryService extends AbstractDiscoveryService
-        implements RegistryListener, NetworkAddressChangeListener {
+public class UpnpControlDiscoveryService extends AbstractDiscoveryService implements RegistryListener {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpControlDiscoveryService.class);
 
@@ -115,15 +109,6 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService
         }
     }
 
-    @Reference
-    protected void setNetworkAddressService(NetworkAddressService networkAddressService) {
-        networkAddressService.addNetworkAddressChangeListener(this);
-    }
-
-    protected void unsetNetworkAddressService(NetworkAddressService networkAddressService) {
-        networkAddressService.removeNetworkAddressChangeListener(this);
-    }
-
     @Override
     public Set<ThingTypeUID> getSupportedThingTypes() {
         return supportedThingTypes;
@@ -159,7 +144,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void remoteDeviceAdded(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (registry == null || device == null) {
+        if (device == null) {
             return;
         }
         DiscoveryResult result = createDiscoveryResult(device);
@@ -188,7 +173,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService
 
     @Override
     public void remoteDeviceRemoved(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (registry == null || device == null) {
+        if (device == null) {
             return;
         }
         long gracePeriod = getRemovalGracePeriodSeconds(device);
@@ -266,24 +251,6 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService
             result = new ThingUID(thingTypeUID, device.getIdentity().getUdn().getIdentifierString());
         }
         return result;
-    }
-
-    @Override
-    public void onChanged(final List<CidrAddress> added, final List<CidrAddress> removed) {
-        scheduler.execute(() -> {
-            if (!removed.isEmpty()) {
-                upnpService.getRegistry().removeAllRemoteDevices();
-            }
-
-            try {
-                upnpService.getRouter().disable();
-                upnpService.getRouter().enable();
-
-                startScan();
-            } catch (RouterException e) {
-                logger.error("Could not restart UPnP network components.", e);
-            }
-        });
     }
 
     @Override
