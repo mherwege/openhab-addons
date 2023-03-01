@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.jupnp.model.meta.RemoteDevice;
 import org.openhab.binding.upnpcontrol.internal.queue.UpnpPlaylistsListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,5 +126,20 @@ public final class UpnpControlUtil {
 
         File file = new File(path + name + extension);
         file.delete();
+    }
+
+    /**
+     * Get a flat list of all subdevices in a device.
+     *
+     * @param device
+     * @return list of subdevices
+     */
+    public static List<RemoteDevice> getSubDevices(RemoteDevice device) {
+        List<RemoteDevice> devices = new ArrayList<>();
+        for (RemoteDevice subDevice : device.getEmbeddedDevices()) {
+            devices.add(subDevice);
+            devices.addAll(getSubDevices(subDevice));
+        }
+        return devices;
     }
 }

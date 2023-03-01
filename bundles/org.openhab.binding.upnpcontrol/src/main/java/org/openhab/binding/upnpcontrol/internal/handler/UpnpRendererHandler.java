@@ -661,6 +661,7 @@ public class UpnpRendererHandler extends UpnpHandler {
                     break;
                 case SHUFFLE:
                     handleCommandShuffle(channelUID, command);
+                    break;
                 case ONLY_PLAY_ONE:
                     handleCommandOnlyPlayOne(channelUID, command);
                     break;
@@ -1525,7 +1526,10 @@ public class UpnpRendererHandler extends UpnpHandler {
             updateMetaDataState(entry);
             setCurrentURI(res, UpnpXMLParser.compileMetadataString(entry));
 
-            if ((playingQueue || playing) && !(onlyplayone && oneplayed)) {
+            boolean play = (playingQueue || playing) && !(onlyplayone && oneplayed);
+            logger.trace("Will we play? {} (playingQueue {}, playing {}, onlyplayone {}, oneplayed {})", play,
+                    playingQueue, playing, onlyplayone, oneplayed);
+            if (play) {
                 logger.trace("Ready to play '{}' from queue", currentEntry);
 
                 trackDuration = 0;

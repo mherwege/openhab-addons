@@ -15,6 +15,7 @@ package org.openhab.binding.upnpcontrol.internal.discovery;
 import static org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstants.*;
 
 import java.net.URL;
+import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -23,12 +24,17 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.jupnp.model.meta.RemoteDevice;
 import org.jupnp.model.meta.RemoteService;
+import org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstants;
+import org.openhab.binding.upnpcontrol.internal.util.UpnpControlUtil;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryResultBuilder;
 import org.openhab.core.config.discovery.upnp.UpnpDiscoveryParticipant;
 import org.openhab.core.thing.ThingTypeUID;
 import org.openhab.core.thing.ThingUID;
+import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Modified;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,19 +42,58 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mark Herwege - Initial contribution
  */
-@Component(service = { UpnpDiscoveryParticipant.class })
+@Component(configurationPid = "discovery.upnpcontrol")
 @NonNullByDefault
 public class UpnpControlDiscoveryParticipant implements UpnpDiscoveryParticipant {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LoggerFactory.getLogger(UpnpControlDiscoveryParticipant.class);
+
+    private boolean isAutoDiscoveryEnabled = true;
+    private Set<ThingTypeUID> supportedThingTypes;
+
+    public UpnpControlDiscoveryParticipant() {
+        this.supportedThingTypes = UpnpControlBindingConstants.SUPPORTED_THING_TYPES_UIDS;
+    }
+
+    @Activate
+    protected void activate(ComponentContext componentContext) {
+        activateOrModifyService(componentContext);
+    }
+
+    @Modified
+    protected void modified(ComponentContext componentContext) {
+        activateOrModifyService(componentContext);
+    }
+
+    private void activateOrModifyService(ComponentContext componentContext) {
+        Dictionary<String, @Nullable Object> properties = componentContext.getProperties();
+        String autoDiscoveryPropertyValue = (String) properties.get("background");
+        if (autoDiscoveryPropertyValue != null && autoDiscoveryPropertyValue.length() != 0) {
+            isAutoDiscoveryEnabled = Boolean.valueOf(autoDiscoveryPropertyValue);
+        }
+    }
 
     @Override
     public Set<ThingTypeUID> getSupportedThingTypeUIDs() {
-        return SUPPORTED_THING_TYPES_UIDS;
+        return supportedThingTypes;
     }
 
     @Override
     public @Nullable DiscoveryResult createResult(RemoteDevice device) {
+        if (!isAutoDiscoveryEnabled) {
+            return null;
+        }
+
+        for (RemoteDevice subDevice : UpnpControlUtil.getSubDevices(device)) {
+            // If there are subdevice media servers or log them here
+            logger.debug("<-- Embedded device found");
+            createDiscoveryResult(subDevice);
+            logger.debug("End embedded device -->");
+        }
+        return createDiscoveryResult(device);
+    }
+
+    private @Nullable DiscoveryResult createDiscoveryResult(RemoteDevice device) {
         DiscoveryResult result = null;
         ThingUID thingUid = getThingUID(device);
         if (thingUid != null) {
@@ -85,11 +130,11 @@ public class UpnpControlDiscoveryParticipant implements UpnpDiscoveryParticipant
                 serialNumber, udn);
 
         if (deviceType.equalsIgnoreCase("MediaRenderer")) {
-            this.logger.debug("Media renderer found: {}, {}", manufacturer, model);
+            logger.debug("Media renderer found: {}, {}", manufacturer, model);
             ThingTypeUID thingTypeUID = THING_TYPE_RENDERER;
             result = new ThingUID(thingTypeUID, device.getIdentity().getUdn().getIdentifierString());
         } else if (deviceType.equalsIgnoreCase("MediaServer")) {
-            this.logger.debug("Media server found: {}, {}", manufacturer, model);
+            logger.debug("Media server found: {}, {}", manufacturer, model);
             ThingTypeUID thingTypeUID = THING_TYPE_SERVER;
             result = new ThingUID(thingTypeUID, device.getIdentity().getUdn().getIdentifierString());
         }
