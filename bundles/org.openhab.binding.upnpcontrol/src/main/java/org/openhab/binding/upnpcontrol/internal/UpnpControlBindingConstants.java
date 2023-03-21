@@ -42,6 +42,7 @@ public class UpnpControlBindingConstants {
 
     // Binding config parameters
     public static final String PATH = "path";
+    public static final String CONFIG_PROPERTY_REMOVAL_GRACE_PERIOD = "removalGracePeriod";
 
     // Thing config parameters
     public static final String UDN_PARAMETER = "udn";
