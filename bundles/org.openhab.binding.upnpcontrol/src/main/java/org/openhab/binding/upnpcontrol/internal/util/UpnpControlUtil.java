@@ -135,8 +135,7 @@ public final class UpnpControlUtil {
      * @return list of devices
      */
     public static List<RemoteDevice> getDevices(RemoteDevice device) {
-        List<RemoteDevice> devices = new ArrayList<>();
-        devices.add(device);
+        List<RemoteDevice> devices = new ArrayList<>(List.of(device));
         for (RemoteDevice subDevice : device.getEmbeddedDevices()) {
             devices.addAll(getDevices(subDevice));
         }
