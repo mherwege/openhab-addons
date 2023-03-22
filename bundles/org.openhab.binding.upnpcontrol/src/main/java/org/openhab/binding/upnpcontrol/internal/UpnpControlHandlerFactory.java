@@ -87,7 +87,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
             final @Reference NetworkAddressService networkAddressService,
             final @Reference UpnpDynamicStateDescriptionProvider dynamicStateDescriptionProvider,
             final @Reference UpnpDynamicCommandDescriptionProvider dynamicCommandDescriptionProvider,
-            Map<String, Object> config) {
+            Map<@Nullable String, @Nullable Object> config) {
         this.upnpIOService = upnpIOService;
         this.upnpService = upnpService;
         this.audioHTTPServer = audioHTTPServer;
@@ -101,7 +101,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
     }
 
     @Modified
-    protected void modified(Map<String, Object> config) {
+    protected void modified(Map<@Nullable String, @Nullable Object> config) {
         // We update instead of replace the configuration object, so that if the user updates the
         // configuration, the values are automatically available in all handlers. Because they all
         // share the same instance.
@@ -226,8 +226,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         if (!(callbackUrl.isEmpty())) {
             UpnpAudioSink audioSink = new UpnpAudioSink(handler, audioHTTPServer, callbackUrl);
             @SuppressWarnings("unchecked")
-            ServiceRegistration<AudioSink> reg = (ServiceRegistration<AudioSink>) bundleContext
-                    .registerService(AudioSink.class.getName(), audioSink, new Hashtable<String, Object>());
+            ServiceRegistration<AudioSink> reg = (ServiceRegistration<AudioSink>) bundleContext.registerService(
+                    AudioSink.class.getName(), audioSink, new Hashtable<@Nullable String, @Nullable Object>());
             Thing thing = handler.getThing();
             audioSinkRegistrations.put(thing.getUID().toString(), reg);
             logger.debug("Audio sink added for media renderer {}", thing.getLabel());
@@ -236,7 +236,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                     callbackUrl);
             @SuppressWarnings("unchecked")
             ServiceRegistration<AudioSink> notificationReg = (ServiceRegistration<AudioSink>) bundleContext
-                    .registerService(AudioSink.class.getName(), notificationAudioSink, new Hashtable<String, Object>());
+                    .registerService(AudioSink.class.getName(), notificationAudioSink,
+                            new Hashtable<@Nullable String, @Nullable Object>());
             audioSinkRegistrations.put(thing.getUID().toString() + NOTIFICATION_AUDIOSINK_EXTENSION, notificationReg);
             logger.debug("Notification audio sink added for media renderer {}", thing.getLabel());
         }

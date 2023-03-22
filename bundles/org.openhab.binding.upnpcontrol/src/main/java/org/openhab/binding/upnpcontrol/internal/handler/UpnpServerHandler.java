@@ -218,7 +218,7 @@ public class UpnpServerHandler extends UpnpHandler {
         if (browsed) {
             isBrowsing = new CompletableFuture<Boolean>();
 
-            Map<String, String> inputs = new HashMap<>();
+            Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
             inputs.put("ObjectID", objectID);
             inputs.put("BrowseFlag", browseFlag);
             inputs.put("Filter", filter);
@@ -264,7 +264,7 @@ public class UpnpServerHandler extends UpnpHandler {
         if (browsed) {
             isBrowsing = new CompletableFuture<Boolean>();
 
-            Map<String, String> inputs = new HashMap<>();
+            Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
             inputs.put("ContainerID", containerID);
             inputs.put("SearchCriteria", searchCriteria);
             inputs.put("Filter", filter);

@@ -42,7 +42,7 @@ public class UpnpAudioSink implements AudioSink {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpAudioSink.class);
 
-    private static final Set<Class<? extends AudioStream>> SUPPORTED_STREAMS = Stream
+    private static final Set<@Nullable Class<? extends @Nullable AudioStream>> SUPPORTED_STREAMS = Stream
             .of(AudioStream.class, FixedLengthAudioStream.class).collect(Collectors.toSet());
     protected UpnpRendererHandler handler;
     protected AudioHTTPServer audioHTTPServer;
@@ -94,7 +94,7 @@ public class UpnpAudioSink implements AudioSink {
     }
 
     @Override
-    public Set<Class<? extends AudioStream>> getSupportedStreams() {
+    public Set<@Nullable Class<? extends @Nullable AudioStream>> getSupportedStreams() {
         return SUPPORTED_STREAMS;
     }
 

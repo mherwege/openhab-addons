@@ -320,7 +320,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         isAvTransportIdSet = new CompletableFuture<Boolean>();
         isRcsIdSet = new CompletableFuture<Boolean>();
 
-        HashMap<String, String> inputs = new HashMap<String, String>();
+        HashMap<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put("RemoteProtocolInfo", remoteProtocolInfo);
         inputs.put("PeerConnectionManager", peerConnectionManager);
         inputs.put("PeerConnectionID", Integer.toString(peerConnectionId));
@@ -333,7 +333,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * Invoke ConnectionComplete on UPnP Connection Manager.
      */
     protected void connectionComplete() {
-        Map<String, String> inputs = Collections.singletonMap(CONNECTION_ID, Integer.toString(connectionId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(CONNECTION_ID,
+                Integer.toString(connectionId));
 
         invokeAction(CONNECTION_MANAGER, "ConnectionComplete", inputs);
     }
@@ -343,7 +344,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * Result is received in {@link #onValueReceived}.
      */
     protected void getCurrentConnectionIDs() {
-        Map<String, String> inputs = Collections.emptyMap();
+        Map<@Nullable String, @Nullable String> inputs = Collections.emptyMap();
 
         invokeAction(CONNECTION_MANAGER, "GetCurrentConnectionIDs", inputs);
     }
@@ -367,7 +368,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         isRcsIdSet = new CompletableFuture<Boolean>();
 
         // ConnectionID will default to 0 if not set through prepareForConnection method
-        Map<String, String> inputs = Collections.singletonMap(CONNECTION_ID, Integer.toString(connectionId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(CONNECTION_ID,
+                Integer.toString(connectionId));
 
         invokeAction(CONNECTION_MANAGER, "GetCurrentConnectionInfo", inputs);
     }
@@ -377,7 +379,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * Result is received in {@link #onValueReceived}.
      */
     protected void getFeatureList() {
-        Map<String, String> inputs = Collections.emptyMap();
+        Map<@Nullable String, @Nullable String> inputs = Collections.emptyMap();
 
         invokeAction(CONNECTION_MANAGER, "GetFeatureList", inputs);
     }
@@ -387,7 +389,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * Result is received in {@link #onValueReceived}.
      */
     protected void getProtocolInfo() {
-        Map<String, String> inputs = Collections.emptyMap();
+        Map<@Nullable String, @Nullable String> inputs = Collections.emptyMap();
 
         invokeAction(CONNECTION_MANAGER, "GetProtocolInfo", inputs);
     }
@@ -425,7 +427,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param actionId
      * @param inputs
      */
-    protected void invokeAction(String serviceId, String actionId, Map<String, String> inputs) {
+    protected void invokeAction(String serviceId, String actionId, Map<@Nullable String, @Nullable String> inputs) {
         upnpScheduler.submit(() -> {
             Map<String, @Nullable String> result;
             synchronized (invokeActionLock) {
@@ -465,7 +467,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param result
      * @return
      */
-    protected Map<String, @Nullable String> preProcessInvokeActionResult(Map<String, String> inputs,
+    protected Map<String, @Nullable String> preProcessInvokeActionResult(Map<@Nullable String, @Nullable String> inputs,
             @Nullable String service, @Nullable String action, Map<String, @Nullable String> result) {
         Map<String, @Nullable String> newResult = new HashMap<>();
         for (String variable : result.keySet()) {

@@ -317,7 +317,8 @@ public class UpnpRendererHandler extends UpnpHandler {
                                                            // received
         }
 
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "Stop", inputs);
     }
@@ -339,7 +340,7 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
 
         if (uriSet) {
-            Map<String, String> inputs = new HashMap<>();
+            Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
             inputs.put(INSTANCE_ID, Integer.toString(avTransportId));
             inputs.put("Speed", "1");
 
@@ -353,7 +354,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Invoke Pause on UPnP AV Transport.
      */
     protected void pause() {
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "Pause", inputs);
     }
@@ -362,7 +364,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Invoke Next on UPnP AV Transport.
      */
     protected void next() {
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "Next", inputs);
     }
@@ -371,7 +374,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Invoke Previous on UPnP AV Transport.
      */
     protected void previous() {
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "Previous", inputs);
     }
@@ -395,7 +399,7 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
 
         if (uriSet) {
-            Map<String, String> inputs = new HashMap<>();
+            Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
             inputs.put(INSTANCE_ID, Integer.toString(avTransportId));
             inputs.put("Unit", "REL_TIME");
             inputs.put("Target", seekTarget);
@@ -428,7 +432,7 @@ public class UpnpRendererHandler extends UpnpHandler {
             logger.debug("New URI {} is same as previous on renderer {}", nowPlayingUri, thing.getLabel());
         }
 
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(avTransportId));
         inputs.put("CurrentURI", uri);
         inputs.put("CurrentURIMetaData", URIMetaData);
@@ -443,7 +447,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param nextURIMetaData
      */
     protected void setNextURI(String nextURI, String nextURIMetaData) {
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(avTransportId));
         inputs.put("NextURI", nextURI);
         inputs.put("NextURIMetaData", nextURIMetaData);
@@ -456,7 +460,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Result is received in {@link #onValueReceived}.
      */
     protected void getTransportState() {
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "GetTransportInfo", inputs);
     }
@@ -466,7 +471,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Result is received in {@link #onValueReceived}.
      */
     protected void getPositionInfo() {
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "GetPositionInfo", inputs);
     }
@@ -476,7 +482,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Result is received in {@link #onValueReceived}.
      */
     protected void getMediaInfo() {
-        Map<String, String> inputs = Collections.singletonMap(INSTANCE_ID, Integer.toString(avTransportId));
+        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
+                Integer.toString(avTransportId));
 
         invokeAction(AV_TRANSPORT, "smarthome:audio stream http://icecast.vrtcdn.be/stubru_tijdloze-high.mp3", inputs);
     }
@@ -500,7 +507,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param channel
      */
     protected void getVolume(String channel) {
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
 
@@ -517,7 +524,7 @@ public class UpnpRendererHandler extends UpnpHandler {
         UpnpRenderingControlConfiguration config = renderingControlConfiguration;
 
         long newVolume = volume.intValue() * config.maxvolume / 100;
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
         inputs.put("DesiredVolume", String.valueOf(newVolume));
@@ -541,7 +548,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param channel
      */
     protected void getMute(String channel) {
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
 
@@ -555,7 +562,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param mute
      */
     protected void setMute(String channel, OnOffType mute) {
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
         inputs.put("DesiredMute", mute == OnOffType.ON ? "1" : "0");
@@ -570,7 +577,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param channel
      */
     protected void getLoudness(String channel) {
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
 
@@ -584,7 +591,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param mute
      */
     protected void setLoudness(String channel, OnOffType mute) {
-        Map<String, String> inputs = new HashMap<>();
+        Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
         inputs.put("DesiredLoudness", mute == OnOffType.ON ? "1" : "0");
