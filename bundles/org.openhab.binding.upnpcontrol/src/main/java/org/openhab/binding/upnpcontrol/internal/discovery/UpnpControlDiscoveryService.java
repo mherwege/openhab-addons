@@ -144,19 +144,12 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
 
     @Override
     public void remoteDeviceAdded(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
-        }
-        DiscoveryResult result = createDiscoveryResult(device);
-        if (result != null) {
-            thingDiscovered(result);
-        }
-        for (RemoteDevice subDevice : UpnpControlUtil.getSubDevices(device)) {
-            // If there are subdevice media servers or renderers handle them here
-            logger.debug("Embedded device found");
-            result = createDiscoveryResult(subDevice);
-            if (result != null) {
-                thingDiscovered(result);
+        if (device != null) {
+            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+                DiscoveryResult result = createDiscoveryResult(subDevice);
+                if (result != null) {
+                    thingDiscovered(result);
+                }
             }
         }
     }
@@ -173,29 +166,24 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
 
     @Override
     public void remoteDeviceRemoved(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
-        }
-        long gracePeriod = getRemovalGracePeriodSeconds(device);
-        if (gracePeriod <= 0) {
-            thingRemoved(device);
-        } else {
-            UDN udn = device.getIdentity().getUdn();
-            cancelRemovalTask(udn);
-            deviceRemovalTasks.put(udn, scheduler.schedule(() -> {
+        if (device != null) {
+            long gracePeriod = getRemovalGracePeriodSeconds(device);
+            if (gracePeriod <= 0) {
                 thingRemoved(device);
+            } else {
+                UDN udn = device.getIdentity().getUdn();
                 cancelRemovalTask(udn);
-            }, gracePeriod, TimeUnit.SECONDS));
+                deviceRemovalTasks.put(udn, scheduler.schedule(() -> {
+                    thingRemoved(device);
+                    cancelRemovalTask(udn);
+                }, gracePeriod, TimeUnit.SECONDS));
+            }
         }
     }
 
     private void thingRemoved(RemoteDevice device) {
-        ThingUID thingUID = getThingUID(device);
-        if (thingUID != null) {
-            thingRemoved(thingUID);
-        }
-        for (RemoteDevice subDevice : UpnpControlUtil.getSubDevices(device)) {
-            thingUID = getThingUID(subDevice);
+        for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+            ThingUID thingUID = getThingUID(subDevice);
             if (thingUID != null) {
                 thingRemoved(thingUID);
             }

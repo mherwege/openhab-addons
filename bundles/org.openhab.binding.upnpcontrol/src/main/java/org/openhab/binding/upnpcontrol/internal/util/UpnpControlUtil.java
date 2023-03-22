@@ -129,16 +129,16 @@ public final class UpnpControlUtil {
     }
 
     /**
-     * Get a flat list of all subdevices in a device.
+     * Get a flat list of all devices in a root device. This includes the root device.
      *
      * @param device
-     * @return list of subdevices
+     * @return list of devices
      */
-    public static List<RemoteDevice> getSubDevices(RemoteDevice device) {
+    public static List<RemoteDevice> getDevices(RemoteDevice device) {
         List<RemoteDevice> devices = new ArrayList<>();
+        devices.add(device);
         for (RemoteDevice subDevice : device.getEmbeddedDevices()) {
-            devices.add(subDevice);
-            devices.addAll(getSubDevices(subDevice));
+            devices.addAll(getDevices(subDevice));
         }
         return devices;
     }
