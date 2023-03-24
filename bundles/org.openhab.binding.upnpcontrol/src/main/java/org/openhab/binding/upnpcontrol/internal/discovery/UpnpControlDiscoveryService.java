@@ -218,7 +218,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
         return result;
     }
 
-    public @Nullable ThingUID getThingUID(RemoteDevice device) {
+    private @Nullable ThingUID getThingUID(RemoteDevice device) {
         ThingUID result = null;
         String deviceType = device.getType().getType();
         String manufacturer = device.getDetails().getManufacturerDetails().getManufacturer();

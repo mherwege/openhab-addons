@@ -33,6 +33,7 @@ import org.openhab.binding.upnpcontrol.internal.config.UpnpControlBindingConfigu
 import org.openhab.binding.upnpcontrol.internal.handler.UpnpHandler;
 import org.openhab.binding.upnpcontrol.internal.handler.UpnpRendererHandler;
 import org.openhab.binding.upnpcontrol.internal.handler.UpnpServerHandler;
+import org.openhab.binding.upnpcontrol.internal.util.UpnpControlUtil;
 import org.openhab.core.audio.AudioHTTPServer;
 import org.openhab.core.audio.AudioSink;
 import org.openhab.core.config.core.Configuration;
@@ -272,39 +273,42 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
     @Override
     public void remoteDeviceAdded(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
-        }
+        if (device != null) {
+            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+                String udn = subDevice.getIdentity().getUdn().getIdentifierString();
+                if ("MediaServer".equals(subDevice.getType().getType())
+                        || "MediaRenderer".equals(subDevice.getType().getType())) {
+                    devices.put(udn, subDevice);
+                }
 
-        String udn = device.getIdentity().getUdn().getIdentifierString();
-        if ("MediaServer".equals(device.getType().getType()) || "MediaRenderer".equals(device.getType().getType())) {
-            devices.put(udn, device);
-        }
-
-        if (handlers.containsKey(udn)) {
-            remoteDeviceUpdated(registry, device);
+                UpnpHandler handler = handlers.get(udn);
+                if (handler != null) {
+                    handler.updateDeviceConfig(subDevice);
+                }
+            }
         }
     }
 
     @Override
     public void remoteDeviceUpdated(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
-        }
-
-        String udn = device.getIdentity().getUdn().getIdentifierString();
-        UpnpHandler handler = handlers.get(udn);
-        if (handler != null) {
-            handler.updateDeviceConfig(device);
+        if (device != null) {
+            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+                String udn = subDevice.getIdentity().getUdn().getIdentifierString();
+                UpnpHandler handler = handlers.get(udn);
+                if (handler != null) {
+                    handler.updateDeviceConfig(subDevice);
+                }
+            }
         }
     }
 
     @Override
     public void remoteDeviceRemoved(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
+        if (device != null) {
+            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+                devices.remove(subDevice.getIdentity().getUdn().getIdentifierString());
+            }
         }
-        devices.remove(device.getIdentity().getUdn().getIdentifierString());
     }
 
     @Override
