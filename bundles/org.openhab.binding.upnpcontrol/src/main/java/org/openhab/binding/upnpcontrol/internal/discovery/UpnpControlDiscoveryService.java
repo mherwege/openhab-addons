@@ -225,9 +225,11 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
         String model = device.getDetails().getModelDetails().getModelName();
         String serialNumber = device.getDetails().getSerialNumber();
         String udn = device.getIdentity().getUdn().getIdentifierString();
+        boolean hasSubDevices = device.hasEmbeddedDevices();
+        int expireMin = device.getIdentity().getMaxAgeSeconds() / 60;
 
-        logger.debug("Device type {}, manufacturer {}, model {}, SN# {}, UDN {}", deviceType, manufacturer, model,
-                serialNumber, udn);
+        logger.debug("Device type {}, manufacturer {}, model {}, SN# {}, UDN {}, has subdevices {}, expires in {} min",
+                deviceType, manufacturer, model, serialNumber, udn, hasSubDevices, expireMin);
 
         if ("MediaRenderer".equalsIgnoreCase(deviceType)) {
             logger.debug("Media renderer found: {}, {}", manufacturer, model);
