@@ -283,6 +283,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
                 UpnpHandler handler = handlers.get(udn);
                 if (handler != null) {
+                    logger.trace("Device with UDN {} added", udn);
                     handler.updateDeviceConfig(subDevice);
                 }
             }
@@ -296,6 +297,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                 String udn = subDevice.getIdentity().getUdn().getIdentifierString();
                 UpnpHandler handler = handlers.get(udn);
                 if (handler != null) {
+                    logger.trace("Device with UDN {} updated", udn);
                     handler.updateDeviceConfig(subDevice);
                 }
             }

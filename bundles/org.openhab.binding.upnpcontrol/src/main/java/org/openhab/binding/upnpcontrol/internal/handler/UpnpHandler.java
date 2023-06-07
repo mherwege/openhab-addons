@@ -244,7 +244,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     }
 
     /**
-     * Method called when a the remote device represented by the thing for this handler is added to the jupnp
+     * Method called when the remote device represented by the thing for this handler is added to the jupnp
      * {@link org.jupnp.registry.RegistryListener RegistryListener} or is updated. Configuration info can be retrieved
      * from the {@link RemoteDevice}.
      *
@@ -448,13 +448,13 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         upnpScheduler.submit(() -> {
             Map<String, @Nullable String> result;
             synchronized (invokeActionLock) {
-                if (logger.isDebugEnabled() && !"GetPositionInfo".equals(actionId)) {
+                if (logger.isDebugEnabled() || logger.isTraceEnabled() && !"GetPositionInfo".equals(actionId)) {
                     // don't log position info refresh every second
                     logger.debug("UPnP device {} invoke upnp action {} on service {} with inputs {}", thing.getLabel(),
                             actionId, serviceId, inputs);
                 }
                 result = upnpIOService.invokeAction(this, serviceId, actionId, inputs);
-                if (logger.isDebugEnabled() && !"GetPositionInfo".equals(actionId)) {
+                if (logger.isDebugEnabled() || logger.isTraceEnabled() && !"GetPositionInfo".equals(actionId)) {
                     // don't log position info refresh every second
                     logger.debug("UPnP device {} invoke upnp action {} on service {} reply {}", thing.getLabel(),
                             actionId, serviceId, result);
