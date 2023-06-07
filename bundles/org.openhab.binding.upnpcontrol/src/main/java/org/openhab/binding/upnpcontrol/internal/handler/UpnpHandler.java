@@ -28,7 +28,9 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.jupnp.UpnpService;
 import org.jupnp.model.meta.RemoteDevice;
+import org.jupnp.model.types.UDN;
 import org.openhab.binding.upnpcontrol.internal.UpnpChannelName;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionProvider;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicStateDescriptionProvider;
@@ -76,6 +78,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     static final String RCS_ID = "RcsID";
     static final Pattern PROTOCOL_PATTERN = Pattern.compile("(?:.*):(?:.*):(.*):(?:.*)");
 
+    private final UpnpService upnpService;
     protected UpnpIOService upnpIOService;
 
     protected volatile @Nullable RemoteDevice device;
@@ -117,11 +120,13 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     protected UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider;
     protected UpnpDynamicCommandDescriptionProvider upnpCommandDescriptionProvider;
 
-    public UpnpHandler(Thing thing, UpnpIOService upnpIOService, UpnpControlBindingConfiguration configuration,
+    public UpnpHandler(Thing thing, UpnpIOService upnpIOService, UpnpService upnpService,
+            UpnpControlBindingConfiguration configuration,
             UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider,
             UpnpDynamicCommandDescriptionProvider upnpCommandDescriptionProvider) {
         super(thing);
 
+        this.upnpService = upnpService;
         this.upnpIOService = upnpIOService;
 
         this.bindingConfig = configuration;
@@ -209,6 +214,18 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * connection is lost.
      */
     protected abstract void initJob();
+
+    /**
+     * Checks if the participant is registered with the UpnpService, either as a root device or embedded device.
+     * This method replaces the equivalent method from the UpnpIOService because it only checks for registration of root
+     * devices. Media devices can be embedded in root devices.
+     *
+     * @param participant
+     * @return true if registered
+     */
+    protected boolean isRegistered(UpnpIOParticipant participant) {
+        return upnpService.getRegistry().getDevice(new UDN(participant.getUDN()), false) != null;
+    }
 
     @Override
     protected void updateStatus(ThingStatus status) {
@@ -591,7 +608,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param duration
      */
     protected void addSubscription(String serviceId, int duration) {
-        if (upnpIOService.isRegistered(this)) {
+        if (isRegistered(this)) {
             logger.debug("UPnP device {} add upnp subscription on {}", thing.getLabel(), serviceId);
             upnpIOService.addSubscription(this, serviceId, duration);
         }
@@ -603,7 +620,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param serviceId
      */
     protected void removeSubscription(String serviceId) {
-        if (upnpIOService.isRegistered(this)) {
+        if (isRegistered(this)) {
             upnpIOService.removeSubscription(this, serviceId);
         }
     }

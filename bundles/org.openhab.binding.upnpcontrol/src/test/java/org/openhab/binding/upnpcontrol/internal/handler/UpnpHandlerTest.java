@@ -28,6 +28,9 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.jupnp.UpnpService;
+import org.jupnp.model.meta.Device;
+import org.jupnp.registry.Registry;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -68,6 +71,9 @@ public class UpnpHandlerTest {
     protected @Nullable UpnpIOService upnpIOService;
 
     @Mock
+    protected @Nullable UpnpService upnpService;
+
+    @Mock
     protected @Nullable UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider;
 
     @Mock
@@ -89,6 +95,14 @@ public class UpnpHandlerTest {
     @Mock
     protected @Nullable ThingHandlerCallback callback;
 
+    @Mock
+    @Nullable
+    protected Registry registry;
+
+    @Mock
+    @Nullable
+    protected Device<?, ?, ?> device;
+
     public void setUp() {
         // don't test for multi-threading, so avoid using extra threads
         implementAsDirectExecutor(requireNonNull(scheduler));
@@ -103,8 +117,9 @@ public class UpnpHandlerTest {
         when(thing.getConfiguration()).thenReturn(requireNonNull(config));
         when(thing.getStatus()).thenReturn(ThingStatus.OFFLINE);
 
-        // stub upnpIOService methods for initialize
-        when(upnpIOService.isRegistered(any())).thenReturn(true);
+        // stub handler.isRegistered for initialize
+        when(upnpService.getRegistry()).thenReturn(requireNonNull(registry));
+        when(registry.getDevice(any(), anyBoolean())).thenReturn(requireNonNull(device));
 
         Map<String, String> result = new HashMap<>();
         result.put("ConnectionID", "0");
