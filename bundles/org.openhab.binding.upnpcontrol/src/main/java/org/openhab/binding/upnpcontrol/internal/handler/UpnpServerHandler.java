@@ -165,7 +165,7 @@ public class UpnpServerHandler extends UpnpHandler {
     @Override
     protected void initJob() {
         synchronized (jobLock) {
-            if (!isRegistered(this)) {
+            if (!isRegistered()) {
                 String msg = String.format("@text/offline.device-not-registered [ \"%s\" ]", getUDN());
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
                 return;

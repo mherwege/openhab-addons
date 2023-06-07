@@ -217,14 +217,13 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
     /**
      * Checks if the participant is registered with the UpnpService, either as a root device or embedded device.
-     * This method replaces the equivalent method from the UpnpIOService because it only checks for registration of root
-     * devices. Media devices can be embedded in root devices.
+     * This method replaces the equivalent method from the UpnpIOService because that one only checks for registration
+     * of root devices. Media devices can be embedded in root devices.
      *
-     * @param participant
      * @return true if registered
      */
-    protected boolean isRegistered(UpnpIOParticipant participant) {
-        return upnpService.getRegistry().getDevice(new UDN(participant.getUDN()), false) != null;
+    protected boolean isRegistered() {
+        return upnpService.getRegistry().getDevice(new UDN(getUDN()), false) != null;
     }
 
     @Override
@@ -608,7 +607,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param duration
      */
     protected void addSubscription(String serviceId, int duration) {
-        if (isRegistered(this)) {
+        if (isRegistered()) {
             logger.debug("UPnP device {} add upnp subscription on {}", thing.getLabel(), serviceId);
             upnpIOService.addSubscription(this, serviceId, duration);
         }
@@ -620,7 +619,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param serviceId
      */
     protected void removeSubscription(String serviceId) {
-        if (isRegistered(this)) {
+        if (isRegistered()) {
             upnpIOService.removeSubscription(this, serviceId);
         }
     }
