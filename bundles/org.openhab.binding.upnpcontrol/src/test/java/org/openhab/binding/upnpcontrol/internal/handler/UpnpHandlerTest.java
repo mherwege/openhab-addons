@@ -103,8 +103,8 @@ public class UpnpHandlerTest {
         when(thing.getConfiguration()).thenReturn(requireNonNull(config));
         when(thing.getStatus()).thenReturn(ThingStatus.OFFLINE);
 
-        // stub upnpIOService methods for initialize
-        when(upnpIOService.isRegistered(any())).thenReturn(true);
+        // stub isRegistered for initialize
+        when(handler.isRegistered(any())).thenReturn(true);
 
         Map<String, String> result = new HashMap<>();
         result.put("ConnectionID", "0");
