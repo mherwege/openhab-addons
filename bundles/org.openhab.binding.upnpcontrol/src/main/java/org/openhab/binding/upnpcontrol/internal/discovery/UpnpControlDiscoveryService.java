@@ -204,6 +204,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
             URL descriptorURL = device.getIdentity().getDescriptorURL();
             properties.put("ipAddress", descriptorURL.getHost());
             properties.put("udn", device.getIdentity().getUdn().getIdentifierString());
+            properties.put("rootUdn", device.getRoot().getIdentity().getUdn().getIdentifierString());
             properties.put("deviceDescrURL", descriptorURL.toString());
             URL baseURL = device.getDetails().getBaseURL();
             if (baseURL != null) {
@@ -225,20 +226,22 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
         String model = device.getDetails().getModelDetails().getModelName();
         String serialNumber = device.getDetails().getSerialNumber();
         String udn = device.getIdentity().getUdn().getIdentifierString();
+        String rootUdn = device.getRoot().getIdentity().getUdn().getIdentifierString();
         boolean hasSubDevices = device.hasEmbeddedDevices();
         int expireMin = device.getIdentity().getMaxAgeSeconds() / 60;
 
-        logger.debug("Device type {}, manufacturer {}, model {}, SN# {}, UDN {}, has subdevices {}, expires in {} min",
-                deviceType, manufacturer, model, serialNumber, udn, hasSubDevices, expireMin);
+        logger.debug(
+                "Device type {}, manufacturer {}, model {}, SN# {}, UDN {}, root UDN {}, has subdevices {}, expires in {} min",
+                deviceType, manufacturer, model, serialNumber, udn, rootUdn, hasSubDevices, expireMin);
 
         if ("MediaRenderer".equalsIgnoreCase(deviceType)) {
             logger.debug("Media renderer found: {}, {}", manufacturer, model);
             ThingTypeUID thingTypeUID = THING_TYPE_RENDERER;
-            result = new ThingUID(thingTypeUID, device.getIdentity().getUdn().getIdentifierString());
+            result = new ThingUID(thingTypeUID, udn);
         } else if ("MediaServer".equalsIgnoreCase(deviceType)) {
             logger.debug("Media server found: {}, {}", manufacturer, model);
             ThingTypeUID thingTypeUID = THING_TYPE_SERVER;
-            result = new ThingUID(thingTypeUID, device.getIdentity().getUdn().getIdentifierString());
+            result = new ThingUID(thingTypeUID, udn);
         }
         return result;
     }

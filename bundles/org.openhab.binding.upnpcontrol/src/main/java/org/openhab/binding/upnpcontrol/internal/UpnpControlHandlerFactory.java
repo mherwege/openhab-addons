@@ -146,16 +146,15 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
     }
 
     private UpnpServerHandler addServer(Thing thing) {
-        UpnpServerHandler handler = new UpnpServerHandler(thing, upnpIOService, upnpService, upnpRenderers,
+        UpnpServerHandler handler = new UpnpServerHandler(thing, upnpIOService, upnpRenderers,
                 upnpStateDescriptionProvider, upnpCommandDescriptionProvider, configuration);
         String key = thing.getUID().toString();
         upnpServers.put(key, handler);
         logger.debug("Media server handler created for {} with UID {}", thing.getLabel(), thing.getUID());
 
-        String udn = handler.getUDN();
+        String udn = handler.getDeviceUDN();
         if (udn != null) {
             handlers.put(udn, handler);
-            remoteDeviceUpdated(null, devices.get(udn));
         }
 
         return handler;
@@ -163,17 +162,16 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
     private UpnpRendererHandler addRenderer(Thing thing) {
         callbackUrl = createCallbackUrl();
-        UpnpRendererHandler handler = new UpnpRendererHandler(thing, upnpIOService, upnpService, this,
-                upnpStateDescriptionProvider, upnpCommandDescriptionProvider, configuration);
+        UpnpRendererHandler handler = new UpnpRendererHandler(thing, upnpIOService, this, upnpStateDescriptionProvider,
+                upnpCommandDescriptionProvider, configuration);
         String key = thing.getUID().toString();
         upnpRenderers.put(key, handler);
         upnpServers.forEach((thingId, value) -> value.addRendererOption(key));
         logger.debug("Media renderer handler created for {} with UID {}", thing.getLabel(), thing.getUID());
 
-        String udn = handler.getUDN();
+        String udn = handler.getDeviceUDN();
         if (udn != null) {
             handlers.put(udn, handler);
-            remoteDeviceUpdated(null, devices.get(udn));
         }
 
         return handler;
@@ -186,7 +184,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         }
         logger.debug("Removing media server handler for {} with UID {}", handler.getThing().getLabel(),
                 handler.getThing().getUID());
-        handlers.remove(handler.getUDN());
+        handlers.remove(handler.getDeviceUDN());
         upnpServers.remove(key);
     }
 
@@ -218,7 +216,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         }
 
         upnpServers.forEach((thingId, value) -> value.removeRendererOption(key));
-        handlers.remove(handler.getUDN());
+        handlers.remove(handler.getDeviceUDN());
         upnpRenderers.remove(key);
     }
 
@@ -279,12 +277,14 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                 if ("MediaServer".equals(subDevice.getType().getType())
                         || "MediaRenderer".equals(subDevice.getType().getType())) {
                     devices.put(udn, subDevice);
+                    logger.trace("Device with UDN {} added", udn);
                 }
 
                 UpnpHandler handler = handlers.get(udn);
-                if (handler != null) {
-                    logger.trace("Device with UDN {} added", udn);
-                    handler.updateDeviceConfig(subDevice);
+                String rootUdn = handler.getUDN();
+                if (handler != null && rootUdn != null && !rootUdn.isBlank()) {
+                    handler.initJob();
+                    logger.debug("Device with UDN {} update config", udn);
                 }
             }
         }
@@ -292,16 +292,6 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
     @Override
     public void remoteDeviceUpdated(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device != null) {
-            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
-                String udn = subDevice.getIdentity().getUdn().getIdentifierString();
-                UpnpHandler handler = handlers.get(udn);
-                if (handler != null) {
-                    logger.trace("Device with UDN {} updated", udn);
-                    handler.updateDeviceConfig(subDevice);
-                }
-            }
-        }
     }
 
     @Override

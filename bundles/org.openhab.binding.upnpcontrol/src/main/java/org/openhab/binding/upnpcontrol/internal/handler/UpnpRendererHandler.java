@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.jupnp.UpnpService;
 import org.jupnp.model.meta.RemoteDevice;
 import org.openhab.binding.upnpcontrol.internal.UpnpChannelName;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionProvider;
@@ -162,12 +161,11 @@ public class UpnpRendererHandler extends UpnpHandler {
     private volatile @Nullable ScheduledFuture<?> trackPositionRefresh;
     private volatile int posAtNotificationStart = 0;
 
-    public UpnpRendererHandler(Thing thing, UpnpIOService upnpIOService, UpnpService upnpService,
-            UpnpAudioSinkReg audioSinkReg, UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider,
+    public UpnpRendererHandler(Thing thing, UpnpIOService upnpIOService, UpnpAudioSinkReg audioSinkReg,
+            UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider,
             UpnpDynamicCommandDescriptionProvider upnpCommandDescriptionProvider,
             UpnpControlBindingConfiguration configuration) {
-        super(thing, upnpIOService, upnpService, configuration, upnpStateDescriptionProvider,
-                upnpCommandDescriptionProvider);
+        super(thing, upnpIOService, configuration, upnpStateDescriptionProvider, upnpCommandDescriptionProvider);
 
         serviceSubscriptions.add(AV_TRANSPORT);
         serviceSubscriptions.add(RENDERING_CONTROL);
@@ -219,46 +217,44 @@ public class UpnpRendererHandler extends UpnpHandler {
     }
 
     @Override
-    protected void initJob() {
-        synchronized (jobLock) {
-            if (!isRegistered()) {
-                String msg = String.format("@text/offline.device-not-registered [ \"%s\" ]", getUDN());
+    public synchronized void initJob() {
+        if (!upnpIOService.isRegistered(this)) {
+            String msg = String.format("@text/offline.device-not-registered [ \"%s\" ]", config.udn);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+            return;
+        }
+
+        if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
+            getProtocolInfo();
+
+            getCurrentConnectionInfo();
+            if (!checkForConnectionIds()) {
+                String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
                 return;
             }
 
-            if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
-                getProtocolInfo();
+            getTransportState();
 
-                getCurrentConnectionInfo();
-                if (!checkForConnectionIds()) {
-                    String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", getUDN());
-                    updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-                    return;
-                }
+            updateFavoritesList();
+            playlistsListChanged();
 
-                getTransportState();
-
-                updateFavoritesList();
-                playlistsListChanged();
-
-                RemoteDevice device = getDevice();
-                if (device != null) { // The handler factory will update the device config later when it has not been
-                                      // set yet
-                    updateDeviceConfig(device);
-                }
-
-                updateStatus(ThingStatus.ONLINE);
+            RemoteDevice device = getDevice();
+            if (device != null) { // The handler factory will update the device config later when it has not been
+                                  // set yet
+                updateDeviceConfig(device);
             }
 
-            if (!upnpSubscribed) {
-                addSubscriptions();
-            }
+            updateStatus(ThingStatus.ONLINE);
+        }
+
+        if (!upnpSubscribed) {
+            addSubscriptions();
         }
     }
 
     @Override
-    public void updateDeviceConfig(RemoteDevice device) {
+    public synchronized void updateDeviceConfig(RemoteDevice device) {
         super.updateDeviceConfig(device);
 
         UpnpRenderingControlConfiguration config = new UpnpRenderingControlConfiguration(device);
@@ -1718,7 +1714,7 @@ public class UpnpRendererHandler extends UpnpHandler {
         if (audioSinkRegistered) {
             logger.debug("Audio Sink already registered for renderer {}", thing.getLabel());
             return;
-        } else if (!isRegistered(this)) {
+        } else if (!upnpIOService.isRegistered(this)) {
             logger.debug("Audio Sink registration for renderer {} failed, no service", thing.getLabel());
             return;
         }

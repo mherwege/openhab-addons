@@ -82,7 +82,7 @@ public class UpnpAudioSink implements AudioSink {
                     : audioHTTPServer.serve(audioStream);
             url = String.valueOf(this.callbackUrl) + relativeUrl;
         } else {
-            logger.warn("We do not have any callback url, so {} cannot play the audio stream!", handler.getUDN());
+            logger.warn("We do not have any callback url, so {} cannot play the audio stream!", handler.getDeviceUDN());
             return;
         }
         playMedia(url);

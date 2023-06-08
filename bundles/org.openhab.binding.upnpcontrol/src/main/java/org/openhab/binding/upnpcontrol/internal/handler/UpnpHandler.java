@@ -28,9 +28,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.jupnp.UpnpService;
 import org.jupnp.model.meta.RemoteDevice;
-import org.jupnp.model.types.UDN;
 import org.openhab.binding.upnpcontrol.internal.UpnpChannelName;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionProvider;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicStateDescriptionProvider;
@@ -78,7 +76,6 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     static final String RCS_ID = "RcsID";
     static final Pattern PROTOCOL_PATTERN = Pattern.compile("(?:.*):(?:.*):(.*):(?:.*)");
 
-    private final UpnpService upnpService;
     protected UpnpIOService upnpIOService;
 
     protected volatile @Nullable RemoteDevice device;
@@ -100,7 +97,6 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     protected final Object invokeActionLock = new Object();
 
     protected @Nullable ScheduledFuture<?> pollingJob;
-    protected final Object jobLock = new Object();
 
     protected volatile @Nullable CompletableFuture<Boolean> isConnectionIdSet;
     protected volatile @Nullable CompletableFuture<Boolean> isAvTransportIdSet;
@@ -120,13 +116,11 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     protected UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider;
     protected UpnpDynamicCommandDescriptionProvider upnpCommandDescriptionProvider;
 
-    public UpnpHandler(Thing thing, UpnpIOService upnpIOService, UpnpService upnpService,
-            UpnpControlBindingConfiguration configuration,
+    public UpnpHandler(Thing thing, UpnpIOService upnpIOService, UpnpControlBindingConfiguration configuration,
             UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider,
             UpnpDynamicCommandDescriptionProvider upnpCommandDescriptionProvider) {
         super(thing);
 
-        this.upnpService = upnpService;
         this.upnpIOService = upnpIOService;
 
         this.bindingConfig = configuration;
@@ -142,6 +136,12 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     @Override
     public void initialize() {
         config = getConfigAs(UpnpControlConfiguration.class);
+
+        if (config.udn == null || config.udn.isBlank()) {
+            String msg = String.format("@text/offline.offline.no-udn [ \"%s\" ]", thing.getLabel());
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
+            return;
+        }
 
         upnpIOService.registerParticipant(this);
 
@@ -193,18 +193,12 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * To be called from implementing classes when initializing the device, to start initialization refresh
      */
     protected void initDevice() {
-        String udn = getUDN();
-        if ((udn != null) && !udn.isEmpty()) {
-            updateStatus(ThingStatus.UNKNOWN);
+        updateStatus(ThingStatus.UNKNOWN);
 
-            if (config.refresh == 0) {
-                upnpScheduler.submit(this::initJob);
-            } else {
-                pollingJob = upnpScheduler.scheduleWithFixedDelay(this::initJob, 0, config.refresh, TimeUnit.SECONDS);
-            }
+        if (config.refresh == 0) {
+            upnpScheduler.submit(this::initJob);
         } else {
-            String msg = String.format("@text/offline.no-udn [ \"%s\" ]", thing.getLabel());
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
+            pollingJob = upnpScheduler.scheduleWithFixedDelay(this::initJob, 0, config.refresh, TimeUnit.SECONDS);
         }
     }
 
@@ -213,18 +207,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * correctly set up for the connection. It can also be called from a polling job to get the thing back online when
      * connection is lost.
      */
-    protected abstract void initJob();
-
-    /**
-     * Checks if the participant is registered with the UpnpService, either as a root device or embedded device.
-     * This method replaces the equivalent method from the UpnpIOService because that one only checks for registration
-     * of root devices. Media devices can be embedded in root devices.
-     *
-     * @return true if registered
-     */
-    protected boolean isRegistered() {
-        return upnpService.getRegistry().getDevice(new UDN(getUDN()), false) != null;
-    }
+    public abstract void initJob();
 
     @Override
     protected void updateStatus(ThingStatus status) {
@@ -574,12 +557,32 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
     @Override
     public @Nullable String getUDN() {
+        if (device != null) {
+            // If this is an embedded device, return udn of root device.
+            String udn = device.getRoot().getIdentity().getUdn().getIdentifierString();
+            if (udn != null) {
+                return udn;
+            }
+        }
+        return config.udn;
+    }
+
+    /**
+     * Get the UDN of the (embedded) device. The {@link getUDN} method by contrast returns the UDN of the root device.
+     *
+     * @return UDN
+     */
+    public @Nullable String getDeviceUDN() {
         return config.udn;
     }
 
     protected boolean checkForConnectionIds() {
-        return checkForConnectionId(isConnectionIdSet) & checkForConnectionId(isAvTransportIdSet)
+        boolean idsSet = checkForConnectionId(isConnectionIdSet) & checkForConnectionId(isAvTransportIdSet)
                 & checkForConnectionId(isRcsIdSet);
+        if (!idsSet) {
+            logger.trace("Connection ID for device with UDN {} could not be retrieved", config.udn);
+        }
+        return idsSet;
     }
 
     private boolean checkForConnectionId(@Nullable CompletableFuture<Boolean> future) {
@@ -607,7 +610,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param duration
      */
     protected void addSubscription(String serviceId, int duration) {
-        if (isRegistered()) {
+        if (upnpIOService.isRegistered(this)) {
             logger.debug("UPnP device {} add upnp subscription on {}", thing.getLabel(), serviceId);
             upnpIOService.addSubscription(this, serviceId, duration);
         }
@@ -619,7 +622,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param serviceId
      */
     protected void removeSubscription(String serviceId) {
-        if (isRegistered()) {
+        if (upnpIOService.isRegistered(this)) {
             upnpIOService.removeSubscription(this, serviceId);
         }
     }
