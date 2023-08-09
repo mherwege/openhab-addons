@@ -225,8 +225,6 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
 
         if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
-            getProtocolInfo();
-
             getCurrentConnectionInfo();
             if (!checkForConnectionIds()) {
                 String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
@@ -234,6 +232,7 @@ public class UpnpRendererHandler extends UpnpHandler {
                 return;
             }
 
+            getProtocolInfo();
             getTransportState();
 
             updateFavoritesList();
