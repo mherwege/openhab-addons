@@ -207,7 +207,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
         String notificationKey = key + NOTIFICATION_AUDIOSINK_EXTENSION;
         if (audioSinkRegistrations.containsKey(notificationKey)) {
-            logger.debug("Removing notification audio sink registration for {}", handler.getThing().getLabel());
+            logger.debug("Removing notification audio sink registration for {} with udn {}",
+                    handler.getThing().getLabel(), handler.getDeviceUDN());
             ServiceRegistration<AudioSink> reg = audioSinkRegistrations.get(notificationKey);
             if (reg != null) {
                 reg.unregister();
@@ -229,7 +230,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                     AudioSink.class.getName(), audioSink, new Hashtable<@Nullable String, @Nullable Object>());
             Thing thing = handler.getThing();
             audioSinkRegistrations.put(thing.getUID().toString(), reg);
-            logger.debug("Audio sink added for media renderer {}", thing.getLabel());
+            logger.debug("Audio sink added for media renderer {} with udn {}", thing.getLabel(),
+                    handler.getDeviceUDN());
 
             UpnpNotificationAudioSink notificationAudioSink = new UpnpNotificationAudioSink(handler, audioHTTPServer,
                     callbackUrl);
@@ -238,7 +240,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                     .registerService(AudioSink.class.getName(), notificationAudioSink,
                             new Hashtable<@Nullable String, @Nullable Object>());
             audioSinkRegistrations.put(thing.getUID().toString() + NOTIFICATION_AUDIOSINK_EXTENSION, notificationReg);
-            logger.debug("Notification audio sink added for media renderer {}", thing.getLabel());
+            logger.debug("Notification audio sink added for media renderer {} with udn {}", thing.getLabel(),
+                    handler.getDeviceUDN());
         }
     }
 
@@ -277,14 +280,16 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                 if ("MediaServer".equals(subDevice.getType().getType())
                         || "MediaRenderer".equals(subDevice.getType().getType())) {
                     devices.put(udn, subDevice);
-                    logger.trace("Device with UDN {} added", udn);
+                    logger.trace("Device with udn {} added", udn);
                 }
 
                 UpnpHandler handler = handlers.get(udn);
-                String rootUdn = handler.getUDN();
-                if (handler != null && rootUdn != null && !rootUdn.isBlank()) {
-                    handler.initJob();
-                    logger.debug("Device with UDN {} update config", udn);
+                if (handler != null) {
+                    String rootUdn = handler.getUDN();
+                    if (rootUdn != null && !rootUdn.isBlank()) {
+                        logger.debug("Device with udn {} update config", udn);
+                        handler.initJob();
+                    }
                 }
             }
         }

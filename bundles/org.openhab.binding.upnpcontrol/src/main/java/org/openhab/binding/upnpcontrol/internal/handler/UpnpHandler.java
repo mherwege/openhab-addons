@@ -130,14 +130,15 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
         // Get this in constructor, so the UDN is immediately available from the config. The concrete classes should
         // update the config from the initialize method.
-        config = getConfigAs(UpnpControlConfiguration.class);
+        this.config = getConfigAs(UpnpControlConfiguration.class);
     }
 
     @Override
     public void initialize() {
-        config = getConfigAs(UpnpControlConfiguration.class);
+        UpnpControlConfiguration config = getConfigAs(UpnpControlConfiguration.class);
+        this.config = config;
 
-        if (config.udn == null || config.udn.isBlank()) {
+        if (config.udn.isBlank()) {
             String msg = String.format("@text/offline.offline.no-udn [ \"%s\" ]", thing.getLabel());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
             return;
