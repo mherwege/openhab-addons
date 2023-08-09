@@ -261,7 +261,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
         if (thing.getChannel(channelUID) != null) {
             // channel already exists
-            logger.trace("UPnP device {}, channel {} already exists", thing.getLabel(), channelId);
+            logger.trace("UPnP device {} with udn {}, channel {} already exists", thing.getLabel(), getDeviceUDN(),
+                    channelId);
             return;
         }
 
@@ -269,7 +270,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         Channel channel = ChannelBuilder.create(channelUID).withLabel(label).withDescription(description)
                 .withAcceptedItemType(itemType).withType(channelTypeUID).build();
 
-        logger.debug("UPnP device {}, created channel {}", thing.getLabel(), channelId);
+        logger.debug("UPnP device {} with udn {}, created channel {}", thing.getLabel(), getDeviceUDN(), channelId);
 
         updatedChannels.add(channel);
         updatedChannelUIDs.add(channelUID);
@@ -395,8 +396,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
     @Override
     public void onServiceSubscribed(@Nullable String service, boolean succeeded) {
-        logger.debug("UPnP device {} received subscription reply {} from service {}", thing.getLabel(), succeeded,
-                service);
+        logger.debug("UPnP device {} with udn {} received subscription reply {} from service {}", thing.getLabel(),
+                getDeviceUDN(), succeeded, service);
         if (!succeeded) {
             upnpSubscribed = false;
             String msg = String.format("@text/offline.subscription-failed [ \"%1$s\", \"%2$s\" ]", service,
@@ -407,7 +408,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
     @Override
     public void onStatusChanged(boolean status) {
-        logger.debug("UPnP device {} received status update {}", thing.getLabel(), status);
+        logger.debug("UPnP device {} with udn {} received status update {}", thing.getLabel(), getDeviceUDN(), status);
         if (status) {
             initJob();
         } else {
@@ -428,18 +429,18 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      */
     protected void invokeAction(String serviceId, String actionId, Map<@Nullable String, @Nullable String> inputs) {
         upnpScheduler.submit(() -> {
-            Map<String, @Nullable String> result;
             synchronized (invokeActionLock) {
+                Map<String, @Nullable String> result;
                 if (logger.isDebugEnabled() || logger.isTraceEnabled() && !"GetPositionInfo".equals(actionId)) {
                     // don't log position info refresh every second
-                    logger.debug("UPnP device {} invoke upnp action {} on service {} with inputs {}", thing.getLabel(),
-                            actionId, serviceId, inputs);
+                    logger.debug("UPnP device {} with udn {} invoke upnp action {} on service {} with inputs {}",
+                            thing.getLabel(), getDeviceUDN(), actionId, serviceId, inputs);
                 }
                 result = upnpIOService.invokeAction(this, serviceId, actionId, inputs);
                 if (logger.isDebugEnabled() || logger.isTraceEnabled() && !"GetPositionInfo".equals(actionId)) {
                     // don't log position info refresh every second
-                    logger.debug("UPnP device {} invoke upnp action {} on service {} reply {}", thing.getLabel(),
-                            actionId, serviceId, result);
+                    logger.debug("UPnP device {} with udn {} invoke upnp action {} on service {} reply {}",
+                            thing.getLabel(), getDeviceUDN(), actionId, serviceId, result);
                 }
 
                 if (!result.isEmpty()) {
@@ -449,9 +450,9 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
                 }
 
                 result = preProcessInvokeActionResult(inputs, serviceId, actionId, result);
-            }
-            for (String variable : result.keySet()) {
-                onValueReceived(variable, result.get(variable), serviceId);
+                for (String variable : result.keySet()) {
+                    onValueReceived(variable, result.get(variable), serviceId);
+                }
             }
         });
     }
@@ -580,7 +581,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         boolean idsSet = checkForConnectionId(isConnectionIdSet) & checkForConnectionId(isAvTransportIdSet)
                 & checkForConnectionId(isRcsIdSet);
         if (!idsSet) {
-            logger.trace("Connection ID for device with UDN {} could not be retrieved", config.udn);
+            logger.debug("Connection ID for device {} with udn {} could not be retrieved", thing.getLabel(),
+                    config.udn);
         }
         return idsSet;
     }
@@ -591,6 +593,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
                 return future.get(config.responseTimeout, TimeUnit.MILLISECONDS);
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            logger.trace("Connection ID future {} for device {} with udn {} exception", future.toString(),
+                    thing.getLabel(), config.udn);
             return false;
         }
         return true;
@@ -611,7 +615,8 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      */
     protected void addSubscription(String serviceId, int duration) {
         if (upnpIOService.isRegistered(this)) {
-            logger.debug("UPnP device {} add upnp subscription on {}", thing.getLabel(), serviceId);
+            logger.debug("UPnP device {} with udn {}, add upnp subscription on {}", thing.getLabel(), getDeviceUDN(),
+                    serviceId);
             upnpIOService.addSubscription(this, serviceId, duration);
         }
     }

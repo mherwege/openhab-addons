@@ -117,7 +117,7 @@ public class UpnpServerHandler extends UpnpHandler {
         super.initialize();
         config = getConfigAs(UpnpControlServerConfiguration.class);
 
-        logger.debug("Initializing handler for media server device {}", thing.getLabel());
+        logger.debug("Initializing handler for media server device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
         Channel rendererChannel = thing.getChannel(UPNPRENDERER);
         if (rendererChannel != null) {
@@ -149,7 +149,7 @@ public class UpnpServerHandler extends UpnpHandler {
 
     @Override
     public void dispose() {
-        logger.debug("Disposing handler for media server device {}", thing.getLabel());
+        logger.debug("Disposing handler for media server device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
         CompletableFuture<Boolean> browsingFuture = isBrowsing;
         if (browsingFuture != null) {
@@ -554,7 +554,7 @@ public class UpnpServerHandler extends UpnpHandler {
             }
         }
         updateStateDescription(rendererChannelUID, rendererStateOptionList);
-        logger.debug("Renderer option {} added to {}", key, thing.getLabel());
+        logger.debug("Renderer option {} added to {} with udn {}", key, thing.getLabel(), getDeviceUDN());
     }
 
     /**
@@ -574,7 +574,7 @@ public class UpnpServerHandler extends UpnpHandler {
             rendererStateOptionList.removeIf(stateOption -> (stateOption.getValue().equals(key)));
         }
         updateStateDescription(rendererChannelUID, rendererStateOptionList);
-        logger.debug("Renderer option {} removed from {}", key, thing.getLabel());
+        logger.debug("Renderer option {} removed from {} with udn {}", key, thing.getLabel(), getDeviceUDN());
     }
 
     @Override
@@ -646,8 +646,8 @@ public class UpnpServerHandler extends UpnpHandler {
 
     @Override
     public void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service) {
-        logger.debug("UPnP device {} received variable {} with value {} from service {}", thing.getLabel(), variable,
-                value, service);
+        logger.debug("UPnP device {} with udn {} received variable {} with value {} from service {}", thing.getLabel(),
+                getDeviceUDN(), variable, value, service);
         if (variable == null) {
             return;
         }

@@ -180,7 +180,7 @@ public class UpnpRendererHandler extends UpnpHandler {
         if (config.seekStep < 1) {
             config.seekStep = 1;
         }
-        logger.debug("Initializing handler for media renderer device {}", thing.getLabel());
+        logger.debug("Initializing handler for media renderer device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
         Channel favoriteSelectChannel = thing.getChannel(FAVORITE_SELECT);
         if (favoriteSelectChannel != null) {
@@ -204,7 +204,7 @@ public class UpnpRendererHandler extends UpnpHandler {
 
     @Override
     public void dispose() {
-        logger.debug("Disposing handler for media renderer device {}", thing.getLabel());
+        logger.debug("Disposing handler for media renderer device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
         cancelTrackPositionRefresh();
         resetPaused();
@@ -333,7 +333,7 @@ public class UpnpRendererHandler extends UpnpHandler {
                 uriSet = settingURI.get(config.responseTimeout, TimeUnit.MILLISECONDS);
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            logger.debug("Timeout exception, media URI not yet set in renderer {}, trying to play anyway",
+            logger.debug("Timeout exception, media URI not yet set in renderer {} trying to play anyway",
                     thing.getLabel());
         }
 
@@ -603,7 +603,8 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param handler
      */
     protected void setServerHandler(UpnpServerHandler handler) {
-        logger.debug("Set server handler {} on renderer {}", handler.getThing().getLabel(), thing.getLabel());
+        logger.debug("Set server handler {} on renderer {} with udn {}", handler.getThing().getLabel(),
+                thing.getLabel(), getDeviceUDN());
         serverHandlers.add(handler);
     }
 
@@ -611,7 +612,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Should be called from server handler when server stops serving this renderer
      */
     protected void unsetServerHandler() {
-        logger.debug("Unset server handler on renderer {}", thing.getLabel());
+        logger.debug("Unset server handler on renderer {} with udn {}", thing.getLabel(), getDeviceUDN());
         for (UpnpServerHandler handler : serverHandlers) {
             Thing serverThing = handler.getThing();
             Channel serverChannel;
@@ -1056,15 +1057,15 @@ public class UpnpRendererHandler extends UpnpHandler {
     @Override
     public void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service) {
         if (logger.isTraceEnabled()) {
-            logger.trace("UPnP device {} received variable {} with value {} from service {}", thing.getLabel(),
-                    variable, value, service);
+            logger.trace("UPnP device {} with udn {} received variable {} with value {} from service {}",
+                    thing.getLabel(), getDeviceUDN(), variable, value, service);
         } else {
             if (logger.isDebugEnabled() && !("AbsTime".equals(variable) || "RelCount".equals(variable)
                     || "RelTime".equals(variable) || "AbsCount".equals(variable) || "Track".equals(variable)
                     || "TrackDuration".equals(variable))) {
                 // don't log all variables received when updating the track position every second
-                logger.debug("UPnP device {} received variable {} with value {} from service {}", thing.getLabel(),
-                        variable, value, service);
+                logger.debug("UPnP device {} with udn {} received variable {} with value {} from service {}",
+                        thing.getLabel(), getDeviceUDN(), variable, value, service);
             }
         }
         if (variable == null) {
@@ -1400,7 +1401,7 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
 
         if (audioSupport) {
-            logger.debug("Renderer {} supports audio", thing.getLabel());
+            logger.debug("Renderer {} with udn {} supports audio", thing.getLabel(), getDeviceUDN());
             registerAudioSink();
         }
     }
@@ -1712,13 +1713,14 @@ public class UpnpRendererHandler extends UpnpHandler {
 
     private void registerAudioSink() {
         if (audioSinkRegistered) {
-            logger.debug("Audio Sink already registered for renderer {}", thing.getLabel());
+            logger.debug("Audio Sink already registered for renderer {} with udn {}", thing.getLabel(), getDeviceUDN());
             return;
         } else if (!upnpIOService.isRegistered(this)) {
-            logger.debug("Audio Sink registration for renderer {} failed, no service", thing.getLabel());
+            logger.debug("Audio Sink registration for renderer {} with udn {} failed, no service", thing.getLabel(),
+                    getDeviceUDN());
             return;
         }
-        logger.debug("Registering Audio Sink for renderer {}", thing.getLabel());
+        logger.debug("Registering Audio Sink for renderer {} with udn {}", thing.getLabel(), getDeviceUDN());
         audioSinkReg.registerAudioSink(this);
         audioSinkRegistered = true;
     }
