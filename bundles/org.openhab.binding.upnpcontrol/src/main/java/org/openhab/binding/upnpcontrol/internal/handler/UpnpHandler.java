@@ -12,23 +12,21 @@
  */
 package org.openhab.binding.upnpcontrol.internal.handler;
 
+import static org.openhab.binding.upnpcontrol.internal.services.UpnpControlServiceConstants.CONNECTION_MANAGER;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.jupnp.model.meta.RemoteDevice;
+import org.jupnp.model.meta.RemoteService;
 import org.openhab.binding.upnpcontrol.internal.UpnpChannelName;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionProvider;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicStateDescriptionProvider;
@@ -69,13 +67,6 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
 
     private final Logger logger = LoggerFactory.getLogger(UpnpHandler.class);
 
-    // UPnP constants
-    static final String CONNECTION_MANAGER = "ConnectionManager";
-    static final String CONNECTION_ID = "ConnectionID";
-    static final String AV_TRANSPORT_ID = "AVTransportID";
-    static final String RCS_ID = "RcsID";
-    static final Pattern PROTOCOL_PATTERN = Pattern.compile("(?:.*):(?:.*):(.*):(?:.*)");
-
     protected UpnpIOService upnpIOService;
 
     protected volatile @Nullable RemoteDevice device;
@@ -87,20 +78,12 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     private final List<Channel> updatedChannels = new ArrayList<>();
     private final List<ChannelUID> updatedChannelUIDs = new ArrayList<>();
 
-    protected volatile int connectionId = 0; // UPnP Connection Id
-    protected volatile int avTransportId = 0; // UPnP AVTtransport Id
-    protected volatile int rcsId = 0; // UPnP Rendering Control Id
-
     protected UpnpControlBindingConfiguration bindingConfig;
     protected UpnpControlConfiguration config;
 
     protected final Object invokeActionLock = new Object();
 
     protected @Nullable ScheduledFuture<?> pollingJob;
-
-    protected volatile @Nullable CompletableFuture<Boolean> isConnectionIdSet;
-    protected volatile @Nullable CompletableFuture<Boolean> isAvTransportIdSet;
-    protected volatile @Nullable CompletableFuture<Boolean> isRcsIdSet;
 
     protected static final int SUBSCRIPTION_DURATION_SECONDS = 3600;
     protected List<String> serviceSubscriptions = new ArrayList<>();
@@ -156,22 +139,6 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         removeSubscriptions();
 
         UpnpControlUtil.playlistsUnsubscribe(this);
-
-        CompletableFuture<Boolean> connectionIdFuture = isConnectionIdSet;
-        if (connectionIdFuture != null) {
-            connectionIdFuture.complete(false);
-            isConnectionIdSet = null;
-        }
-        CompletableFuture<Boolean> avTransportIdFuture = isAvTransportIdSet;
-        if (avTransportIdFuture != null) {
-            avTransportIdFuture.complete(false);
-            isAvTransportIdSet = null;
-        }
-        CompletableFuture<Boolean> rcsIdFuture = isRcsIdSet;
-        if (rcsIdFuture != null) {
-            rcsIdFuture.complete(false);
-            isRcsIdSet = null;
-        }
 
         updateChannels = false;
         updatedChannels.clear();
@@ -292,109 +259,6 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         updateChannels = false;
     }
 
-    /**
-     * Invoke PrepareForConnection on the UPnP Connection Manager.
-     * Result is received in {@link #onValueReceived}.
-     *
-     * @param remoteProtocolInfo
-     * @param peerConnectionManager
-     * @param peerConnectionId
-     * @param direction
-     */
-    protected void prepareForConnection(String remoteProtocolInfo, String peerConnectionManager, int peerConnectionId,
-            String direction) {
-        CompletableFuture<Boolean> settingConnection = isConnectionIdSet;
-        CompletableFuture<Boolean> settingAVTransport = isAvTransportIdSet;
-        CompletableFuture<Boolean> settingRcs = isRcsIdSet;
-        if (settingConnection != null) {
-            settingConnection.complete(false);
-        }
-        if (settingAVTransport != null) {
-            settingAVTransport.complete(false);
-        }
-        if (settingRcs != null) {
-            settingRcs.complete(false);
-        }
-
-        // Set new futures, so we don't try to use service when connection id's are not known yet
-        isConnectionIdSet = new CompletableFuture<Boolean>();
-        isAvTransportIdSet = new CompletableFuture<Boolean>();
-        isRcsIdSet = new CompletableFuture<Boolean>();
-
-        HashMap<@Nullable String, @Nullable String> inputs = new HashMap<>();
-        inputs.put("RemoteProtocolInfo", remoteProtocolInfo);
-        inputs.put("PeerConnectionManager", peerConnectionManager);
-        inputs.put("PeerConnectionID", Integer.toString(peerConnectionId));
-        inputs.put("Direction", direction);
-
-        invokeAction(CONNECTION_MANAGER, "PrepareForConnection", inputs);
-    }
-
-    /**
-     * Invoke ConnectionComplete on UPnP Connection Manager.
-     */
-    protected void connectionComplete() {
-        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(CONNECTION_ID,
-                Integer.toString(connectionId));
-
-        invokeAction(CONNECTION_MANAGER, "ConnectionComplete", inputs);
-    }
-
-    /**
-     * Invoke GetCurrentConnectionIDs on the UPnP Connection Manager.
-     * Result is received in {@link #onValueReceived}.
-     */
-    protected void getCurrentConnectionIDs() {
-        Map<@Nullable String, @Nullable String> inputs = Collections.emptyMap();
-
-        invokeAction(CONNECTION_MANAGER, "GetCurrentConnectionIDs", inputs);
-    }
-
-    /**
-     * Invoke GetCurrentConnectionInfo on the UPnP Connection Manager.
-     * Result is received in {@link #onValueReceived}.
-     */
-    protected void getCurrentConnectionInfo() {
-        CompletableFuture<Boolean> settingAVTransport = isAvTransportIdSet;
-        CompletableFuture<Boolean> settingRcs = isRcsIdSet;
-        if (settingAVTransport != null) {
-            settingAVTransport.complete(false);
-        }
-        if (settingRcs != null) {
-            settingRcs.complete(false);
-        }
-
-        // Set new futures, so we don't try to use service when connection id's are not known yet
-        isAvTransportIdSet = new CompletableFuture<Boolean>();
-        isRcsIdSet = new CompletableFuture<Boolean>();
-
-        // ConnectionID will default to 0 if not set through prepareForConnection method
-        Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(CONNECTION_ID,
-                Integer.toString(connectionId));
-
-        invokeAction(CONNECTION_MANAGER, "GetCurrentConnectionInfo", inputs);
-    }
-
-    /**
-     * Invoke GetFeatureList on the UPnP Connection Manager.
-     * Result is received in {@link #onValueReceived}.
-     */
-    protected void getFeatureList() {
-        Map<@Nullable String, @Nullable String> inputs = Collections.emptyMap();
-
-        invokeAction(CONNECTION_MANAGER, "GetFeatureList", inputs);
-    }
-
-    /**
-     * Invoke GetProtocolInfo on UPnP Connection Manager.
-     * Result is received in {@link #onValueReceived}.
-     */
-    protected void getProtocolInfo() {
-        Map<@Nullable String, @Nullable String> inputs = Collections.emptyMap();
-
-        invokeAction(CONNECTION_MANAGER, "GetProtocolInfo", inputs);
-    }
-
     @Override
     public void onServiceSubscribed(@Nullable String service, boolean succeeded) {
         logger.debug("UPnP device {} with udn {} received subscription reply {} from service {}", thing.getLabel(),
@@ -428,7 +292,7 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
      * @param actionId
      * @param inputs
      */
-    protected void invokeAction(String serviceId, String actionId, Map<@Nullable String, @Nullable String> inputs) {
+    public void invokeAction(String serviceId, String actionId, Map<@Nullable String, @Nullable String> inputs) {
         upnpScheduler.submit(() -> {
             synchronized (invokeActionLock) {
                 Map<String, @Nullable String> result;
@@ -496,68 +360,6 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     }
 
     @Override
-    public void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service) {
-        if (variable == null || value == null) {
-            return;
-        }
-        switch (variable) {
-            case CONNECTION_ID:
-                onValueReceivedConnectionId(value);
-                break;
-            case AV_TRANSPORT_ID:
-                onValueReceivedAVTransportId(value);
-                break;
-            case RCS_ID:
-                onValueReceivedRcsId(value);
-                break;
-            case "Source":
-            case "Sink":
-                if (!value.isEmpty()) {
-                    updateProtocolInfo(value);
-                }
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void onValueReceivedConnectionId(@Nullable String value) {
-        try {
-            connectionId = (value == null) ? 0 : Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            connectionId = 0;
-        }
-        CompletableFuture<Boolean> connectionIdFuture = isConnectionIdSet;
-        if (connectionIdFuture != null) {
-            connectionIdFuture.complete(true);
-        }
-    }
-
-    private void onValueReceivedAVTransportId(@Nullable String value) {
-        try {
-            avTransportId = (value == null) ? 0 : Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            avTransportId = 0;
-        }
-        CompletableFuture<Boolean> avTransportIdFuture = isAvTransportIdSet;
-        if (avTransportIdFuture != null) {
-            avTransportIdFuture.complete(true);
-        }
-    }
-
-    private void onValueReceivedRcsId(@Nullable String value) {
-        try {
-            rcsId = (value == null) ? 0 : Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            rcsId = 0;
-        }
-        CompletableFuture<Boolean> rcsIdFuture = isRcsIdSet;
-        if (rcsIdFuture != null) {
-            rcsIdFuture.complete(true);
-        }
-    }
-
-    @Override
     public @Nullable String getUDN() {
         if (device != null) {
             // If this is an embedded device, return udn of root device.
@@ -578,35 +380,12 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
         return config.udn;
     }
 
-    protected boolean checkForConnectionIds() {
-        boolean idsSet = checkForConnectionId(isConnectionIdSet) & checkForConnectionId(isAvTransportIdSet)
-                & checkForConnectionId(isRcsIdSet);
-        if (!idsSet) {
-            logger.debug("Connection ID for device {} with udn {} could not be retrieved", thing.getLabel(),
-                    config.udn);
-        }
-        return idsSet;
-    }
-
-    private boolean checkForConnectionId(@Nullable CompletableFuture<Boolean> future) {
-        if (future == null) {
-            return false;
-        }
-        try {
-            return future.get(config.responseTimeout, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            logger.trace("Connection ID future {} for device {} with udn {} exception", future.toString(),
-                    thing.getLabel(), config.udn);
-            return false;
-        }
-    }
-
     /**
      * Update internal representation of supported protocols, needs to be implemented in derived classes.
      *
      * @param value
      */
-    protected abstract void updateProtocolInfo(String value);
+    public abstract void updateProtocolInfo(String value);
 
     /**
      * Subscribe this handler as a participant to a GENA subscription.
@@ -679,4 +458,27 @@ public abstract class UpnpHandler extends BaseThingHandler implements UpnpIOPart
     protected @Nullable RemoteDevice getDevice() {
         return device;
     }
+
+    /**
+     * Get connectionManager string needed for UPnP {@link prepareForConnection} method.
+     *
+     * @return connectionManager String
+     */
+    protected String getConnectionManager() {
+        RemoteDevice device = this.device;
+        String connectionManager = "";
+        if (device != null) {
+            RemoteService service = UpnpControlUtil.findService(device, CONNECTION_MANAGER);
+            if (service != null) {
+                connectionManager = device.getIdentity().getUdn().toString() + "/" + service.getServiceId().toString();
+            }
+        }
+        return connectionManager;
+    }
+
+    public abstract void setConnectionId(int connectionId);
+
+    public abstract void setAvTransportId(int avTransportId);
+
+    public abstract void setRcsId(int rcsId);
 }

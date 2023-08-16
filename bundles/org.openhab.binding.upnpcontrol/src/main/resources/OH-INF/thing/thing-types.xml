@@ -24,8 +24,6 @@
 			<channel id="favorite" typeId="favorite"/>
 			<channel id="favoriteaction" typeId="favoriteaction"/>
 
-			<channel id="playlistselect" typeId="playlistselect"/>
-
 			<channel id="title" typeId="system.media-title"/>
 			<channel id="album" typeId="album"/>
 			<channel id="albumart" typeId="albumart"/>
@@ -37,6 +35,16 @@
 			<channel id="trackduration" typeId="trackduration"/>
 			<channel id="trackposition" typeId="trackposition"/>
 			<channel id="reltrackposition" typeId="reltrackposition"/>
+
+            <channel id="upnpserver" typeId="upnpserver"/>
+
+            <channel id="currenttitle" typeId="system.media-title"/>
+            <channel id="browse" typeId="browse"/>
+            <channel id="search" typeId="search"/>
+
+            <channel id="playlistselect" typeId="playlistselect"/>
+            <channel id="playlist" typeId="playlist"/>
+            <channel id="playlistaction" typeId="playlistaction"/>
 		</channels>
 		<representation-property>udn</representation-property>
 		<config-description>
@@ -77,22 +85,6 @@
 	<thing-type id="upnpserver">
 		<label>UPnPServer</label>
 		<description>UPnP AV Server</description>
-		<channels>
-			<channel id="upnprenderer" typeId="upnprenderer"/>
-			<channel id="currenttitle" typeId="system.media-title"/>
-			<channel id="browse" typeId="browse"/>
-			<channel id="search" typeId="search"/>
-
-			<channel id="playlistselect" typeId="playlistselect"/>
-			<channel id="playlist" typeId="playlist"/>
-			<channel id="playlistaction" typeId="playlistaction"/>
-
-			<channel id="volume" typeId="system.volume"/>
-			<channel id="mute" typeId="system.mute"/>
-			<channel id="control" typeId="system.media-control"/>
-			<channel id="stop" typeId="stop"/>
-
-		</channels>
 		<representation-property>udn</representation-property>
 		<config-description>
 			<parameter name="udn" type="text" required="true">
@@ -248,10 +240,10 @@
 		<category>MediaControl</category>
 	</channel-type>
 
-	<channel-type id="upnprenderer">
+	<channel-type id="upnpserver">
 		<item-type>String</item-type>
-		<label>Renderer</label>
-		<description>Select AV renderer</description>
+		<label>Server</label>
+		<description>Select AV server</description>
 	</channel-type>
 	<channel-type id="browse">
 		<item-type>String</item-type>
