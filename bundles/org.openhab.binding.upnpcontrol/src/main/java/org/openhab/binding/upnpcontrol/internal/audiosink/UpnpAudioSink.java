@@ -41,7 +41,7 @@ public class UpnpAudioSink extends AudioSinkAsync {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpAudioSink.class);
 
-    private static final Set<Class<? extends AudioStream>> SUPPORTED_STREAMS = Set.of(AudioStream.class);
+    private static final Set<@Nullable Class<? extends @Nullable AudioStream>> SUPPORTED_STREAMS = Set.of(AudioStream.class);
     protected UpnpRendererHandler handler;
     protected AudioHTTPServer audioHTTPServer;
     protected String callbackUrl;
@@ -92,7 +92,7 @@ public class UpnpAudioSink extends AudioSinkAsync {
             streamServed.playEnd().thenRun(() -> this.playbackFinished(audioStream));
             playMedia(callbackUrl + streamServed.url());
         } else {
-            logger.warn("We do not have any callback url, so {} cannot play the audio stream!", handler.getUDN());
+            logger.warn("We do not have any callback url, so {} cannot play the audio stream!", handler.getDeviceUDN());
             try {
                 audioStream.close();
             } catch (IOException e) {
@@ -106,7 +106,7 @@ public class UpnpAudioSink extends AudioSinkAsync {
     }
 
     @Override
-    public Set<Class<? extends AudioStream>> getSupportedStreams() {
+    public Set<@Nullable Class<? extends @Nullable AudioStream>> getSupportedStreams() {
         return SUPPORTED_STREAMS;
     }
 

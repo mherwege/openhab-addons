@@ -13,7 +13,6 @@
 package org.openhab.binding.upnpcontrol.internal.config;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.eclipse.jdt.annotation.Nullable;
 
 /**
  *
@@ -22,7 +21,7 @@ import org.eclipse.jdt.annotation.Nullable;
  */
 @NonNullByDefault
 public class UpnpControlConfiguration {
-    public @Nullable String udn;
+    public String udn = "";
     public int refresh = 60;
     public int responseTimeout = 2500;
 }

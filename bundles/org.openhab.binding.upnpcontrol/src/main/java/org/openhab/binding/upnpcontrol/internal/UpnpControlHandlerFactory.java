@@ -33,6 +33,7 @@ import org.openhab.binding.upnpcontrol.internal.config.UpnpControlBindingConfigu
 import org.openhab.binding.upnpcontrol.internal.handler.UpnpHandler;
 import org.openhab.binding.upnpcontrol.internal.handler.UpnpRendererHandler;
 import org.openhab.binding.upnpcontrol.internal.handler.UpnpServerHandler;
+import org.openhab.binding.upnpcontrol.internal.util.UpnpControlUtil;
 import org.openhab.core.audio.AudioHTTPServer;
 import org.openhab.core.audio.AudioSink;
 import org.openhab.core.config.core.Configuration;
@@ -87,7 +88,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
             final @Reference NetworkAddressService networkAddressService,
             final @Reference UpnpDynamicStateDescriptionProvider dynamicStateDescriptionProvider,
             final @Reference UpnpDynamicCommandDescriptionProvider dynamicCommandDescriptionProvider,
-            Map<String, Object> config) {
+            Map<@Nullable String, @Nullable Object> config) {
         this.upnpIOService = upnpIOService;
         this.upnpService = upnpService;
         this.audioHTTPServer = audioHTTPServer;
@@ -101,7 +102,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
     }
 
     @Modified
-    protected void modified(Map<String, Object> config) {
+    protected void modified(Map<@Nullable String, @Nullable Object> config) {
         // We update instead of replace the configuration object, so that if the user updates the
         // configuration, the values are automatically available in all handlers. Because they all
         // share the same instance.
@@ -151,10 +152,9 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         upnpServers.put(key, handler);
         logger.debug("Media server handler created for {} with UID {}", thing.getLabel(), thing.getUID());
 
-        String udn = handler.getUDN();
+        String udn = handler.getDeviceUDN();
         if (udn != null) {
             handlers.put(udn, handler);
-            remoteDeviceUpdated(null, devices.get(udn));
         }
 
         return handler;
@@ -169,10 +169,9 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         upnpServers.forEach((thingId, value) -> value.addRendererOption(key));
         logger.debug("Media renderer handler created for {} with UID {}", thing.getLabel(), thing.getUID());
 
-        String udn = handler.getUDN();
+        String udn = handler.getDeviceUDN();
         if (udn != null) {
             handlers.put(udn, handler);
-            remoteDeviceUpdated(null, devices.get(udn));
         }
 
         return handler;
@@ -185,7 +184,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         }
         logger.debug("Removing media server handler for {} with UID {}", handler.getThing().getLabel(),
                 handler.getThing().getUID());
-        handlers.remove(handler.getUDN());
+        handlers.remove(handler.getDeviceUDN());
         upnpServers.remove(key);
     }
 
@@ -208,7 +207,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
         String notificationKey = key + NOTIFICATION_AUDIOSINK_EXTENSION;
         if (audioSinkRegistrations.containsKey(notificationKey)) {
-            logger.debug("Removing notification audio sink registration for {}", handler.getThing().getLabel());
+            logger.debug("Removing notification audio sink registration for {} with udn {}",
+                    handler.getThing().getLabel(), handler.getDeviceUDN());
             ServiceRegistration<AudioSink> reg = audioSinkRegistrations.get(notificationKey);
             if (reg != null) {
                 reg.unregister();
@@ -217,7 +217,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         }
 
         upnpServers.forEach((thingId, value) -> value.removeRendererOption(key));
-        handlers.remove(handler.getUDN());
+        handlers.remove(handler.getDeviceUDN());
         upnpRenderers.remove(key);
     }
 
@@ -226,19 +226,22 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         if (!(callbackUrl.isEmpty())) {
             UpnpAudioSink audioSink = new UpnpAudioSink(handler, audioHTTPServer, callbackUrl);
             @SuppressWarnings("unchecked")
-            ServiceRegistration<AudioSink> reg = (ServiceRegistration<AudioSink>) bundleContext
-                    .registerService(AudioSink.class.getName(), audioSink, new Hashtable<String, Object>());
+            ServiceRegistration<AudioSink> reg = (ServiceRegistration<AudioSink>) bundleContext.registerService(
+                    AudioSink.class.getName(), audioSink, new Hashtable<@Nullable String, @Nullable Object>());
             Thing thing = handler.getThing();
             audioSinkRegistrations.put(thing.getUID().toString(), reg);
-            logger.debug("Audio sink added for media renderer {}", thing.getLabel());
+            logger.debug("Audio sink added for media renderer {} with udn {}", thing.getLabel(),
+                    handler.getDeviceUDN());
 
             UpnpNotificationAudioSink notificationAudioSink = new UpnpNotificationAudioSink(handler, audioHTTPServer,
                     callbackUrl);
             @SuppressWarnings("unchecked")
             ServiceRegistration<AudioSink> notificationReg = (ServiceRegistration<AudioSink>) bundleContext
-                    .registerService(AudioSink.class.getName(), notificationAudioSink, new Hashtable<String, Object>());
+                    .registerService(AudioSink.class.getName(), notificationAudioSink,
+                            new Hashtable<@Nullable String, @Nullable Object>());
             audioSinkRegistrations.put(thing.getUID().toString() + NOTIFICATION_AUDIOSINK_EXTENSION, notificationReg);
-            logger.debug("Notification audio sink added for media renderer {}", thing.getLabel());
+            logger.debug("Notification audio sink added for media renderer {} with udn {}", thing.getLabel(),
+                    handler.getDeviceUDN());
         }
     }
 
@@ -271,39 +274,38 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
     @Override
     public void remoteDeviceAdded(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
-        }
+        if (device != null) {
+            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+                String udn = subDevice.getIdentity().getUdn().getIdentifierString();
+                if ("MediaServer".equals(subDevice.getType().getType())
+                        || "MediaRenderer".equals(subDevice.getType().getType())) {
+                    devices.put(udn, subDevice);
+                    logger.trace("Device with udn {} added", udn);
+                }
 
-        String udn = device.getIdentity().getUdn().getIdentifierString();
-        if ("MediaServer".equals(device.getType().getType()) || "MediaRenderer".equals(device.getType().getType())) {
-            devices.put(udn, device);
-        }
-
-        if (handlers.containsKey(udn)) {
-            remoteDeviceUpdated(registry, device);
+                UpnpHandler handler = handlers.get(udn);
+                if (handler != null) {
+                    String rootUdn = handler.getUDN();
+                    if (rootUdn != null && !rootUdn.isBlank()) {
+                        logger.debug("Device with udn {} update config", udn);
+                        handler.initJob();
+                    }
+                }
+            }
         }
     }
 
     @Override
     public void remoteDeviceUpdated(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
-        }
-
-        String udn = device.getIdentity().getUdn().getIdentifierString();
-        UpnpHandler handler = handlers.get(udn);
-        if (handler != null) {
-            handler.updateDeviceConfig(device);
-        }
     }
 
     @Override
     public void remoteDeviceRemoved(@Nullable Registry registry, @Nullable RemoteDevice device) {
-        if (device == null) {
-            return;
+        if (device != null) {
+            for (RemoteDevice subDevice : UpnpControlUtil.getDevices(device)) {
+                devices.remove(subDevice.getIdentity().getUdn().getIdentifierString());
+            }
         }
-        devices.remove(device.getIdentity().getUdn().getIdentifierString());
     }
 
     @Override

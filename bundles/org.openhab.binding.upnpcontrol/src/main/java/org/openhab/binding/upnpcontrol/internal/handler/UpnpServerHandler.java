@@ -117,7 +117,7 @@ public class UpnpServerHandler extends UpnpHandler {
         super.initialize();
         config = getConfigAs(UpnpControlServerConfiguration.class);
 
-        logger.debug("Initializing handler for media server device {}", thing.getLabel());
+        logger.debug("Initializing handler for media server device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
         Channel rendererChannel = thing.getChannel(UPNPRENDERER);
         if (rendererChannel != null) {
@@ -161,32 +161,30 @@ public class UpnpServerHandler extends UpnpHandler {
     }
 
     @Override
-    protected void initJob() {
-        synchronized (jobLock) {
-            if (!upnpIOService.isRegistered(this)) {
-                String msg = String.format("@text/offline.device-not-registered [ \"%s\" ]", getUDN());
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-                return;
-            }
+    public synchronized void initJob() {
+        if (!upnpIOService.isRegistered(this)) {
+            String msg = String.format("@text/offline.device-not-registered [ \"%s\" ]", config.udn);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+            return;
+        }
 
-            if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
-                rendererStateOptionList = Collections.synchronizedList(new ArrayList<>());
-                synchronized (rendererStateOptionList) {
-                    upnpRenderers.forEach((key, value) -> {
-                        StateOption stateOption = new StateOption(key, value.getThing().getLabel());
-                        rendererStateOptionList.add(stateOption);
-                    });
-                }
-                updateStateDescription(rendererChannelUID, rendererStateOptionList);
-                getProtocolInfo();
-                browse(currentEntry.getId(), "BrowseDirectChildren", "*", "0", "0", config.sortCriteria);
-                playlistsListChanged();
-                updateStatus(ThingStatus.ONLINE);
+        if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
+            rendererStateOptionList = Collections.synchronizedList(new ArrayList<>());
+            synchronized (rendererStateOptionList) {
+                upnpRenderers.forEach((key, value) -> {
+                    StateOption stateOption = new StateOption(key, value.getThing().getLabel());
+                    rendererStateOptionList.add(stateOption);
+                });
             }
+            updateStateDescription(rendererChannelUID, rendererStateOptionList);
+            getProtocolInfo();
+            browse(currentEntry.getId(), "BrowseDirectChildren", "*", "0", "0", config.sortCriteria);
+            playlistsListChanged();
+            updateStatus(ThingStatus.ONLINE);
+        }
 
-            if (!upnpSubscribed) {
-                addSubscriptions();
-            }
+        if (!upnpSubscribed) {
+            addSubscriptions();
         }
     }
 
@@ -218,7 +216,7 @@ public class UpnpServerHandler extends UpnpHandler {
         if (browsed) {
             isBrowsing = new CompletableFuture<Boolean>();
 
-            Map<String, String> inputs = new HashMap<>();
+            Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
             inputs.put("ObjectID", objectID);
             inputs.put("BrowseFlag", browseFlag);
             inputs.put("Filter", filter);
@@ -264,7 +262,7 @@ public class UpnpServerHandler extends UpnpHandler {
         if (browsed) {
             isBrowsing = new CompletableFuture<Boolean>();
 
-            Map<String, String> inputs = new HashMap<>();
+            Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
             inputs.put("ContainerID", containerID);
             inputs.put("SearchCriteria", searchCriteria);
             inputs.put("Filter", filter);
@@ -556,7 +554,7 @@ public class UpnpServerHandler extends UpnpHandler {
             }
         }
         updateStateDescription(rendererChannelUID, rendererStateOptionList);
-        logger.debug("Renderer option {} added to {}", key, thing.getLabel());
+        logger.debug("Renderer option {} added to {} with udn {}", key, thing.getLabel(), getDeviceUDN());
     }
 
     /**
@@ -576,7 +574,7 @@ public class UpnpServerHandler extends UpnpHandler {
             rendererStateOptionList.removeIf(stateOption -> (stateOption.getValue().equals(key)));
         }
         updateStateDescription(rendererChannelUID, rendererStateOptionList);
-        logger.debug("Renderer option {} removed from {}", key, thing.getLabel());
+        logger.debug("Renderer option {} removed from {} with udn {}", key, thing.getLabel(), getDeviceUDN());
     }
 
     @Override
@@ -648,8 +646,8 @@ public class UpnpServerHandler extends UpnpHandler {
 
     @Override
     public void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service) {
-        logger.debug("UPnP device {} received variable {} with value {} from service {}", thing.getLabel(), variable,
-                value, service);
+        logger.debug("UPnP device {} with udn {} received variable {} with value {} from service {}", thing.getLabel(),
+                getDeviceUDN(), variable, value, service);
         if (variable == null) {
             return;
         }
@@ -732,7 +730,7 @@ public class UpnpServerHandler extends UpnpHandler {
                 logger.debug("Nothing to serve from server {} to renderer {}", thing.getLabel(),
                         handler.getThing().getLabel());
             } else {
-                UpnpEntryQueue queue = new UpnpEntryQueue(mediaQueue, getUDN());
+                UpnpEntryQueue queue = new UpnpEntryQueue(mediaQueue, config.udn);
                 handler.registerQueue(queue);
                 logger.debug("Serving media queue {} from server {} to renderer {}", mediaQueue, thing.getLabel(),
                         handler.getThing().getLabel());
