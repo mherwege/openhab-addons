@@ -115,20 +115,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
     }
 
     @Override
-    protected void startBackgroundDiscovery() {
-        upnpService.getRegistry().addListener(this);
-    }
-
-    @Override
-    protected void stopBackgroundDiscovery() {
-        upnpService.getRegistry().removeListener(this);
-    }
-
-    @Override
     protected void startScan() {
-        for (RemoteDevice device : upnpService.getRegistry().getRemoteDevices()) {
-            remoteDeviceAdded(upnpService.getRegistry(), device);
-        }
         upnpService.getRegistry().addListener(this);
         upnpService.getControlPoint().search();
     }
@@ -137,9 +124,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
     protected synchronized void stopScan() {
         removeOlderResults(getTimestampOfLastScan());
         super.stopScan();
-        if (!isBackgroundDiscoveryEnabled()) {
-            upnpService.getRegistry().removeListener(this);
-        }
+        upnpService.getRegistry().removeListener(this);
     }
 
     @Override

@@ -87,6 +87,18 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
     }
 
+    public UpnpServerBrowser(UpnpServerBrowser browser, UpnpRendererHandler rendererHandler) {
+        this.serverHandler = browser.serverHandler;
+        this.rendererHandler = rendererHandler;
+
+        this.browseUp = browser.browseUp;
+        this.playlistName = browser.playlistName;
+
+        this.currentEntry = browser.currentEntry;
+        this.entries = Collections.synchronizedList(new ArrayList<>(browser.entries));
+        this.parentMap = new ConcurrentHashMap<>(browser.parentMap);
+    }
+
     protected void serverBrowse() {
         serverHandler.browse(currentEntry.getId(), "BrowseDirectChildren", "*", "0", "0", getConfig().sortCriteria,
                 this);
@@ -316,6 +328,8 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         handler.updateState(BROWSE, StringType.valueOf(currentEntry.getId()));
         handler.updateState(CURRENTTITLE, StringType.valueOf(currentEntry.getTitle()));
 
+        serverHandler.browsingFinished();
+
         serveMedia();
     }
 
@@ -427,7 +441,7 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
                         serverHandler.getThing().getLabel(), handler.getThing().getLabel());
 
                 // always keep a copy of current list that is being served
-                queue.persistQueue(label != null ? label : "current", getBindingConfig().path);
+                queue.persistQueue("current" + (label != null ? label.replace(" ", "_") : ""), getBindingConfig().path);
                 UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
             }
         }

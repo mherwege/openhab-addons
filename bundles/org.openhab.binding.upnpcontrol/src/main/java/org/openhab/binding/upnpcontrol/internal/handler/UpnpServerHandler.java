@@ -40,7 +40,6 @@ import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.types.Command;
-import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.State;
 import org.openhab.core.types.StateOption;
 import org.openhab.core.types.UnDefType;
@@ -63,7 +62,7 @@ public class UpnpServerHandler extends UpnpHandler {
     private volatile @Nullable UpnpRendererHandler currentRendererHandler;
     private volatile List<StateOption> rendererStateOptionList = Collections.synchronizedList(new ArrayList<>());
 
-    private @NonNullByDefault({}) ChannelUID rendererChannelUID;
+    private @Nullable ChannelUID rendererChannelUID;
 
     private volatile @Nullable CompletableFuture<Boolean> isBrowsing;
 
@@ -132,7 +131,7 @@ public class UpnpServerHandler extends UpnpHandler {
                     rendererStateOptionList.add(stateOption);
                 });
             }
-            updateStateDescription(rendererChannelUID, rendererStateOptionList);
+            updateRenderersList();
 
             getFeatureList();
             getProtocolInfo();
@@ -276,38 +275,23 @@ public class UpnpServerHandler extends UpnpHandler {
 
     private void handleCommandUpnpRenderer(ChannelUID channelUID, Command command) {
         UpnpRendererHandler renderer = null;
-        UpnpRendererHandler previousRenderer = currentRendererHandler;
         if (command instanceof StringType) {
             renderer = (upnpRenderers.get(((StringType) command).toString()));
             currentRendererHandler = renderer;
-            if (config.filter) {
-                // only refresh title list if filtering by renderer capabilities
-                browser.serverBrowse();
-            } else {
-                browser.serveMedia();
+
+            UpnpRendererHandler handler = currentRendererHandler;
+
+            if (handler != null) {
+                Channel channel = handler.getThing().getChannel(UPNPSERVER);
+                if (channel != null) {
+                    handler.initServerBrowser(this, new UpnpServerBrowser(browser, handler));
+                }
             }
         }
 
-        if ((renderer != null) && !renderer.equals(previousRenderer)) {
-            if (previousRenderer != null) {
-                previousRenderer.unsetServerHandler();
-            }
-            renderer.setServerHandler(this);
-
-            Channel channel;
-            if ((channel = thing.getChannel(VOLUME)) != null) {
-                handleCommand(channel.getUID(), RefreshType.REFRESH);
-            }
-            if ((channel = thing.getChannel(MUTE)) != null) {
-                handleCommand(channel.getUID(), RefreshType.REFRESH);
-            }
-            if ((channel = thing.getChannel(CONTROL)) != null) {
-                handleCommand(channel.getUID(), RefreshType.REFRESH);
-            }
-        }
-
-        if ((renderer = currentRendererHandler) != null) {
+        if (renderer != null) {
             updateState(channelUID, StringType.valueOf(renderer.getThing().getUID().toString()));
+            updateState(VOLUME, renderer.getCurrentVolume());
         } else {
             updateState(channelUID, UnDefType.UNDEF);
         }
@@ -338,7 +322,7 @@ public class UpnpServerHandler extends UpnpHandler {
                 rendererStateOptionList.add(new StateOption(key, handler.getThing().getLabel()));
             }
         }
-        updateStateDescription(rendererChannelUID, rendererStateOptionList);
+        updateRenderersList();
         logger.debug("Renderer option {} added to {} with udn {}", key, thing.getLabel(), getDeviceUDN());
     }
 
@@ -351,15 +335,23 @@ public class UpnpServerHandler extends UpnpHandler {
      */
     public void removeRendererOption(String key) {
         UpnpRendererHandler handler = currentRendererHandler;
-        if ((handler != null) && (handler.getThing().getUID().toString().equals(key))) {
+        ChannelUID uid = rendererChannelUID;
+        if ((handler != null) && (uid != null) && (handler.getThing().getUID().toString().equals(key))) {
             currentRendererHandler = null;
-            updateState(rendererChannelUID, UnDefType.UNDEF);
+            updateState(uid, UnDefType.UNDEF);
         }
         synchronized (rendererStateOptionList) {
             rendererStateOptionList.removeIf(stateOption -> (stateOption.getValue().equals(key)));
         }
-        updateStateDescription(rendererChannelUID, rendererStateOptionList);
+        updateRenderersList();
         logger.debug("Renderer option {} removed from {} with udn {}", key, thing.getLabel(), getDeviceUDN());
+    }
+
+    private void updateRenderersList() {
+        ChannelUID uid = rendererChannelUID;
+        if (uid != null) {
+            updateStateDescription(uid, rendererStateOptionList);
+        }
     }
 
     @Override
@@ -392,6 +384,14 @@ public class UpnpServerHandler extends UpnpHandler {
                 super.onValueReceived(variable, value, service);
                 break;
         }
+    }
+
+    protected void browsingFinished() {
+        CompletableFuture<Boolean> browsing = isBrowsing;
+        if (browsing != null) { // wait for maximum 2.5s until browsing is finished
+            browsing.complete(true);
+        }
+        this.isBrowsing = null;
     }
 
     @Override

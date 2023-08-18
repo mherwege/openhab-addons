@@ -38,7 +38,7 @@
 			<channel id="reltrackposition" typeId="reltrackposition"/>
 			
             <channel id="upnpserver" typeId="upnpserver"/>
-            <channel id="currenttitle" typeId="system.media-title"/>
+            <channel id="directorytitle" typeId="system.media-title"/>
             <channel id="browse" typeId="browse"/>
             <channel id="search" typeId="search"/>
 		</channels>
@@ -251,7 +251,11 @@
 		<description>Track position as percentage of track duration</description>
 		<category>MediaControl</category>
 	</channel-type>
-
+    <channel-type id="upnpserver">
+        <item-type>String</item-type>
+        <label>Server</label>
+        <description>Select AV server</description>
+    </channel-type>
 	<channel-type id="upnprenderer">
 		<item-type>String</item-type>
 		<label>Renderer</label>
