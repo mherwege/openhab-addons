@@ -150,6 +150,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
                 upnpStateDescriptionProvider, upnpCommandDescriptionProvider, configuration);
         String key = thing.getUID().toString();
         upnpServers.put(key, handler);
+        upnpRenderers.forEach((thingId, value) -> value.addServerOption(key));
         logger.debug("Media server handler created for {} with UID {}", thing.getLabel(), thing.getUID());
 
         String udn = handler.getDeviceUDN();
@@ -162,8 +163,8 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
 
     private UpnpRendererHandler addRenderer(Thing thing) {
         callbackUrl = createCallbackUrl();
-        UpnpRendererHandler handler = new UpnpRendererHandler(thing, upnpIOService, this, upnpStateDescriptionProvider,
-                upnpCommandDescriptionProvider, configuration);
+        UpnpRendererHandler handler = new UpnpRendererHandler(thing, upnpIOService, upnpServers, this,
+                upnpStateDescriptionProvider, upnpCommandDescriptionProvider, configuration);
         String key = thing.getUID().toString();
         upnpRenderers.put(key, handler);
         upnpServers.forEach((thingId, value) -> value.addRendererOption(key));
@@ -184,6 +185,7 @@ public class UpnpControlHandlerFactory extends BaseThingHandlerFactory implement
         }
         logger.debug("Removing media server handler for {} with UID {}", handler.getThing().getLabel(),
                 handler.getThing().getUID());
+        upnpRenderers.forEach((thingId, value) -> value.removeServerOption(key));
         handlers.remove(handler.getDeviceUDN());
         upnpServers.remove(key);
     }

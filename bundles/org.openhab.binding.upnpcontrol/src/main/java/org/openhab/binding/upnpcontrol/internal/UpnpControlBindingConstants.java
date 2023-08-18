@@ -14,6 +14,7 @@ package org.openhab.binding.upnpcontrol.internal;
 
 import java.io.File;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,6 +60,7 @@ public class UpnpControlBindingConstants {
     public static final String SEEK_STEP = "seekstep";
 
     // List of all Channel ids
+    public static final String UPNPSERVER = "upnpserver";
     public static final String VOLUME = "volume";
     public static final String MUTE = "mute";
     public static final String CONTROL = "control";
@@ -120,4 +122,21 @@ public class UpnpControlBindingConstants {
 
     // Notification audio sink name extension
     public static final String NOTIFICATION_AUDIOSINK_EXTENSION = "-notify";
+
+    // UPnP constants
+    public static final String CONNECTION_MANAGER = "ConnectionManager";
+    public static final String CONNECTION_ID = "ConnectionID";
+    public static final Pattern PROTOCOL_PATTERN = Pattern.compile("(?:.*):(?:.*):(.*):(?:.*)");
+
+    public static final String AV_TRANSPORT = "AVTransport";
+    public static final String AV_TRANSPORT_ID = "AVTransportID";
+
+    public static final String RENDERING_CONTROL = "RenderingControl";
+    public static final String RCS_ID = "RcsID";
+    public static final String INSTANCE_ID = "InstanceID";
+
+    public static final String CONTENT_DIRECTORY = "ContentDirectory";
+    public static final String DIRECTORY_ROOT = "0";
+    public static final String UP = "..";
+
 }

@@ -26,6 +26,9 @@ import java.util.stream.Collectors;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.jupnp.model.meta.RemoteDevice;
+import org.jupnp.model.meta.RemoteService;
+import org.jupnp.model.types.ServiceId;
+import org.jupnp.model.types.UDAServiceId;
 import org.openhab.binding.upnpcontrol.internal.queue.UpnpPlaylistsListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,5 +143,17 @@ public final class UpnpControlUtil {
             devices.addAll(getDevices(subDevice));
         }
         return devices;
+    }
+
+    public static @Nullable RemoteService findService(RemoteDevice device, String serviceID) {
+        RemoteService service = null;
+        String namespace = device.getType().getNamespace();
+        if (UDAServiceId.DEFAULT_NAMESPACE.equals(namespace)
+                || UDAServiceId.BROKEN_DEFAULT_NAMESPACE.equals(namespace)) {
+            service = device.findService(new UDAServiceId(serviceID));
+        } else {
+            service = device.findService(new ServiceId(namespace, serviceID));
+        }
+        return service;
     }
 }

@@ -21,10 +21,13 @@ import static org.mockito.Mockito.*;
 import static org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstants.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -50,6 +53,7 @@ import org.openhab.core.library.types.StringType;
 import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.ChannelUID;
+import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingUID;
 import org.openhab.core.thing.binding.builder.ChannelBuilder;
@@ -157,6 +161,12 @@ public class UpnpRendererHandlerTest extends UpnpHandlerTest {
     private ChannelUID relTrackPositionChannelUID = new ChannelUID(THING_UID + ":" + REL_TRACK_POSITION);
     private Channel relTrackPositionChannel = ChannelBuilder.create(relTrackPositionChannelUID, "Dimmer").build();
 
+    private ConcurrentMap<String, UpnpServerHandler> upnpServers = new ConcurrentHashMap<>();
+
+    @Mock
+    private @Nullable UpnpServerHandler serverHandler;
+    @Mock
+    private @Nullable Thing serverThing;
     @Mock
     private @Nullable UpnpAudioSinkReg audioSinkReg;
 
@@ -169,6 +179,13 @@ public class UpnpRendererHandlerTest extends UpnpHandlerTest {
         when(thing.getUID()).thenReturn(new ThingUID("upnpcontrol", "upnprenderer", "mockrenderer"));
         when(thing.getLabel()).thenReturn("MockRenderer");
         when(thing.getStatus()).thenReturn(ThingStatus.OFFLINE);
+
+        // stub serverHandler
+        when(serverHandler.getSource()).thenReturn(Arrays.asList("http-get:*:audio/mpeg:*"));
+        when(serverHandler.getThing()).thenReturn(requireNonNull(serverThing));
+        when(serverThing.getUID()).thenReturn(new ThingUID("upnpcontrol", "upnpserver", "mockserver"));
+        when(serverThing.getLabel()).thenReturn("MockRenderer");
+        upnpServers.put(serverThing.getUID().toString(), requireNonNull(serverHandler));
 
         // stub channels
         when(thing.getChannel(VOLUME)).thenReturn(volumeChannel);
@@ -203,7 +220,7 @@ public class UpnpRendererHandlerTest extends UpnpHandlerTest {
         upnpEntryQueue = new UpnpEntryQueue(entries, "54321");
 
         handler = spy(new UpnpRendererHandler(requireNonNull(thing), requireNonNull(upnpIOService),
-                requireNonNull(audioSinkReg), requireNonNull(upnpStateDescriptionProvider),
+                requireNonNull(upnpServers), requireNonNull(audioSinkReg), requireNonNull(upnpStateDescriptionProvider),
                 requireNonNull(upnpCommandDescriptionProvider), configuration));
 
         initHandler(requireNonNull(handler));

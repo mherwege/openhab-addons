@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -34,10 +35,12 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.jupnp.model.meta.RemoteDevice;
+import org.jupnp.model.meta.RemoteService;
 import org.openhab.binding.upnpcontrol.internal.UpnpChannelName;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionProvider;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicStateDescriptionProvider;
@@ -71,6 +74,7 @@ import org.openhab.core.types.Command;
 import org.openhab.core.types.CommandOption;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.State;
+import org.openhab.core.types.StateOption;
 import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,11 +92,6 @@ public class UpnpRendererHandler extends UpnpHandler {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpRendererHandler.class);
 
-    // UPnP constants
-    static final String RENDERING_CONTROL = "RenderingControl";
-    static final String AV_TRANSPORT = "AVTransport";
-    static final String INSTANCE_ID = "InstanceID";
-
     private volatile boolean audioSupport;
     protected volatile Set<AudioFormat> supportedAudioFormats = new HashSet<>();
     private volatile boolean audioSinkRegistered;
@@ -101,14 +100,19 @@ public class UpnpRendererHandler extends UpnpHandler {
 
     private volatile Set<UpnpServerHandler> serverHandlers = ConcurrentHashMap.newKeySet();
 
+    ConcurrentMap<String, UpnpServerHandler> upnpServers;
+    private volatile @Nullable UpnpServerHandler currentServerHandler;
+    private volatile List<StateOption> serverStateOptionList = Collections.synchronizedList(new ArrayList<>());
+    private @NonNullByDefault({}) UpnpServerBrowser browser;
+    protected volatile int peerConnectionId = 0; // UPnP Media Server Connection Id
+
     protected @NonNullByDefault({}) UpnpControlRendererConfiguration config;
     private UpnpRenderingControlConfiguration renderingControlConfiguration = new UpnpRenderingControlConfiguration();
 
     private volatile List<CommandOption> favoriteCommandOptionList = List.of();
-    private volatile List<CommandOption> playlistCommandOptionList = List.of();
 
+    private @NonNullByDefault({}) ChannelUID serverChannelUID;
     private @NonNullByDefault({}) ChannelUID favoriteSelectChannelUID;
-    private @NonNullByDefault({}) ChannelUID playlistSelectChannelUID;
 
     private volatile PercentType soundVolume = new PercentType();
     private @Nullable volatile PercentType notificationVolume;
@@ -161,11 +165,13 @@ public class UpnpRendererHandler extends UpnpHandler {
     private volatile @Nullable ScheduledFuture<?> trackPositionRefresh;
     private volatile int posAtNotificationStart = 0;
 
-    public UpnpRendererHandler(Thing thing, UpnpIOService upnpIOService, UpnpAudioSinkReg audioSinkReg,
+    public UpnpRendererHandler(Thing thing, UpnpIOService upnpIOService,
+            ConcurrentMap<String, UpnpServerHandler> upnpServers, UpnpAudioSinkReg audioSinkReg,
             UpnpDynamicStateDescriptionProvider upnpStateDescriptionProvider,
             UpnpDynamicCommandDescriptionProvider upnpCommandDescriptionProvider,
             UpnpControlBindingConfiguration configuration) {
         super(thing, upnpIOService, configuration, upnpStateDescriptionProvider, upnpCommandDescriptionProvider);
+        this.upnpServers = upnpServers;
 
         serviceSubscriptions.add(AV_TRANSPORT);
         serviceSubscriptions.add(RENDERING_CONTROL);
@@ -182,19 +188,19 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
         logger.debug("Initializing handler for media renderer device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
+        Channel serverChannel = thing.getChannel(UPNPSERVER);
+        if (serverChannel != null) {
+            serverChannelUID = serverChannel.getUID();
+        } else {
+            String msg = String.format("@text/offline.channel-undefined [ \"%s\" ]", UPNPRENDERER);
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
+            return;
+        }
         Channel favoriteSelectChannel = thing.getChannel(FAVORITE_SELECT);
         if (favoriteSelectChannel != null) {
             favoriteSelectChannelUID = favoriteSelectChannel.getUID();
         } else {
             String msg = String.format("@text/offline.channel-undefined [ \"%s\" ]", FAVORITE_SELECT);
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return;
-        }
-        Channel playlistSelectChannel = thing.getChannel(PLAYLIST_SELECT);
-        if (playlistSelectChannel != null) {
-            playlistSelectChannelUID = playlistSelectChannel.getUID();
-        } else {
-            String msg = String.format("@text/offline.channel-undefined [ \"%s\" ]", PLAYLIST_SELECT);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
             return;
         }
@@ -225,14 +231,18 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
 
         if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
-            getCurrentConnectionInfo();
-            if (!checkForConnectionIds()) {
-                String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
-                updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-                return;
+            serverStateOptionList = Collections.synchronizedList(new ArrayList<>());
+            synchronized (serverStateOptionList) {
+                upnpServers.forEach((key, value) -> {
+                    StateOption stateOption = new StateOption(key, value.getThing().getLabel());
+                    serverStateOptionList.add(stateOption);
+                });
             }
+            updateStateDescription(serverChannelUID, serverStateOptionList);
 
+            getFeatureList();
             getProtocolInfo();
+            getCurrentConnectionInfo();
             getTransportState();
 
             updateFavoritesList();
@@ -692,6 +702,18 @@ public class UpnpRendererHandler extends UpnpHandler {
                 case REL_TRACK_POSITION:
                     handleCommandRelTrackPosition(channelUID, command);
                     break;
+                case UPNPSERVER:
+                    handleCommandUpnpServer(channelUID, command);
+                    break;
+                case CURRENTTITLE:
+                    handleCommandCurrentTitle(command);
+                    break;
+                case BROWSE:
+                    handleCommandBrowse(command);
+                    break;
+                case SEARCH:
+                    handleCommandSearch(command);
+                    break;
                 default:
                     break;
             }
@@ -908,6 +930,120 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
     }
 
+    private void handleCommandUpnpServer(ChannelUID channelUID, Command command) {
+        UpnpServerHandler server = null;
+        UpnpServerHandler previousServer = currentServerHandler;
+        if (command instanceof StringType) {
+            server = (upnpServers.get(((StringType) command).toString()));
+            currentServerHandler = server;
+        }
+
+        if ((previousServer != null) && (server != previousServer)) {
+            connectionComplete(connectionId);
+            previousServer.connectionComplete(peerConnectionId);
+            peerConnectionId = 0;
+            browser = null;
+        }
+        if ((server != null) && (server != previousServer)) {
+            UpnpServerBrowser browser = new UpnpServerBrowser(server, this);
+            this.browser = browser;
+            browser.serverBrowse();
+
+            RemoteDevice peerDevice = server.getDevice();
+            if (peerDevice != null
+                    && Stream.of(peerDevice.getServices()).anyMatch(s -> s.getAction("PrepareForConnection") != null)) {
+                RemoteService peerService = UpnpControlUtil.findService(peerDevice, CONNECTION_MANAGER);
+                if (peerService != null) {
+                    browser.prepareForConnection(String.join(",", getSink()), peerService.toString(), -1, "Input");
+                    if (!checkForConnectionIds()) {
+                        String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+                        return;
+                    }
+                }
+            }
+            RemoteDevice device = getDevice();
+            if (device != null
+                    && Stream.of(device.getServices()).anyMatch(s -> s.getAction("PrepareForConnection") != null)) {
+                RemoteService service = UpnpControlUtil.findService(device, CONNECTION_MANAGER);
+                if (service != null) {
+                    prepareForConnection(String.join(",", server.getSource()), service.toString(), peerConnectionId,
+                            "Output");
+                    if (!checkForConnectionIds()) {
+                        String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if ((server = currentServerHandler) != null) {
+            updateState(channelUID, StringType.valueOf(server.getThing().getUID().toString()));
+        } else {
+            updateState(channelUID, UnDefType.UNDEF);
+        }
+    }
+
+    private void handleCommandCurrentTitle(Command command) {
+        UpnpServerBrowser browser = this.browser;
+        if (browser != null) {
+            browser.currentTitle(this, command);
+        }
+    }
+
+    private void handleCommandBrowse(Command command) {
+        UpnpServerBrowser browser = this.browser;
+        if (browser != null) {
+            browser.browse(this, command);
+        }
+    }
+
+    private void handleCommandSearch(Command command) {
+        UpnpServerBrowser browser = this.browser;
+        if (browser != null) {
+            browser.search(this, command);
+        }
+    }
+
+    /**
+     * Add a server to the server channel state option list.
+     * This method is called from the {@link org.openhab.binding.upnpcontrol.internal.UpnpControlHandlerFactory
+     * UpnpControlHandlerFactory} class when creating a server handler.
+     *
+     * @param key
+     */
+    public void addServerOption(String key) {
+        synchronized (serverStateOptionList) {
+            UpnpServerHandler handler = upnpServers.get(key);
+            if (handler != null) {
+                serverStateOptionList.add(new StateOption(key, handler.getThing().getLabel()));
+            }
+        }
+        updateStateDescription(serverChannelUID, serverStateOptionList);
+        logger.debug("server option {} added to {} with udn {}", key, thing.getLabel(), getDeviceUDN());
+    }
+
+    /**
+     * Remove a server from the server channel state option list.
+     * This method is called from the {@link org.openhab.binding.upnpcontrol.internal.UpnpControlHandlerFactory
+     * UpnpControlHandlerFactory} class when removing a server handler.
+     *
+     * @param key
+     */
+    public void removeServerOption(String key) {
+        UpnpServerHandler handler = currentServerHandler;
+        if ((handler != null) && (handler.getThing().getUID().toString().equals(key))) {
+            currentServerHandler = null;
+            updateState(serverChannelUID, UnDefType.UNDEF);
+        }
+        synchronized (serverStateOptionList) {
+            serverStateOptionList.removeIf(stateOption -> (stateOption.getValue().equals(key)));
+        }
+        updateStateDescription(serverChannelUID, serverStateOptionList);
+        logger.debug("server option {} removed from {} with udn {}", key, thing.getLabel(), getDeviceUDN());
+    }
+
     /**
      * Set the volume for notifications.
      *
@@ -1017,13 +1153,6 @@ public class UpnpRendererHandler extends UpnpHandler {
     }
 
     @Override
-    public void playlistsListChanged() {
-        playlistCommandOptionList = UpnpControlUtil.playlists().stream().map(p -> (new CommandOption(p, p)))
-                .collect(Collectors.toList());
-        updateCommandDescription(playlistSelectChannelUID, playlistCommandOptionList);
-    }
-
-    @Override
     public void onStatusChanged(boolean status) {
         if (!status) {
             removeSubscriptions();
@@ -1051,6 +1180,12 @@ public class UpnpRendererHandler extends UpnpHandler {
                     return variable;
             }
         }
+    }
+
+    @Override
+    protected void onValueReceived(@Nullable UpnpInvocationCallback callback, @Nullable String variable,
+            @Nullable String value, @Nullable String service) {
+        onValueReceived(variable, value, service);
     }
 
     @Override
@@ -1424,7 +1559,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      *
      * @param queue
      */
-    protected void registerQueue(UpnpEntryQueue queue) {
+    public void registerQueue(UpnpEntryQueue queue) {
         if (currentQueue.equals(queue)) {
             // We get the same queue, so do nothing
             return;
@@ -1727,7 +1862,12 @@ public class UpnpRendererHandler extends UpnpHandler {
     /**
      * @return UPnP sink definitions supported by the renderer.
      */
-    protected List<String> getSink() {
+    public List<String> getSink() {
         return sink;
+    }
+
+    protected void setPeerConnectionId(int connectionId) {
+        peerConnectionId = connectionId;
+        connectionIdSet();
     }
 }

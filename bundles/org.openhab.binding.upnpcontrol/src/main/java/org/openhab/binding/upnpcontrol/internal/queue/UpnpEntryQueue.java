@@ -272,12 +272,13 @@ public class UpnpEntryQueue {
     }
 
     /**
-     * Persist queue as a playlist with name "current"
+     * Persist queue as a playlist with provided name, overwrite if existing.
      *
+     * @param name of the playlist
      * @param path of playlist directory
      */
-    public void persistQueue(String path) {
-        persistQueue("current", false, path);
+    public void persistQueue(String name, String path) {
+        persistQueue(name, false, path);
     }
 
     /**

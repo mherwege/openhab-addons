@@ -12,6 +12,8 @@
  */
 package org.openhab.binding.upnpcontrol.internal.services;
 
+import static org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstants.RENDERING_CONTROL;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -21,7 +23,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.jupnp.model.meta.RemoteDevice;
 import org.jupnp.model.meta.RemoteService;
-import org.jupnp.model.types.ServiceId;
+import org.openhab.binding.upnpcontrol.internal.util.UpnpControlUtil;
 
 /**
  * Class representing the configuration of the renderer. Instantiation will get configuration parameters from UPnP
@@ -31,8 +33,6 @@ import org.jupnp.model.types.ServiceId;
  */
 @NonNullByDefault
 public class UpnpRenderingControlConfiguration {
-    protected static final String UPNP_RENDERING_CONTROL_SCHEMA = "urn:schemas-upnp-org:service:RenderingControl";
-
     public Set<String> audioChannels = Collections.emptySet();
 
     public boolean volume;
@@ -49,7 +49,7 @@ public class UpnpRenderingControlConfiguration {
             return;
         }
 
-        RemoteService rcService = device.findService(ServiceId.valueOf(UPNP_RENDERING_CONTROL_SCHEMA));
+        RemoteService rcService = UpnpControlUtil.findService(device, RENDERING_CONTROL);
         if (rcService != null) {
             volume = (rcService.getStateVariable("Volume") != null);
             if (volume) {

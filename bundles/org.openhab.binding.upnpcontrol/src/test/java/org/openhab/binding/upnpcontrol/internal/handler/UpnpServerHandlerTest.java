@@ -33,6 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.openhab.binding.upnpcontrol.internal.UpnpControlBindingConstants;
 import org.openhab.binding.upnpcontrol.internal.config.UpnpControlServerConfiguration;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.Channel;
@@ -193,7 +194,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.config.searchFromRoot = false;
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is(UpnpServerHandler.DIRECTORY_ROOT));
+        assertThat(handler.browser.currentEntry.getId(), is(UpnpControlBindingConstants.DIRECTORY_ROOT));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -206,11 +207,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("C1"));
-        assertThat(handler.entries.get(0).getTitle(), is("All Audio Items"));
-        assertThat(handler.entries.get(1).getId(), is("C2"));
-        assertThat(handler.entries.get(1).getTitle(), is("All Image Items"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("C1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("All Audio Items"));
+        assertThat(handler.browser.entries.get(1).getId(), is("C2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("All Image Items"));
 
         // Check that BROWSE channel gets the correct command options, no UP should be added
         ArgumentCaptor<List<StateOption>> commandOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -241,7 +242,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(browseChannelUID, StringType.valueOf("C11"));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C11"));
+        assertThat(handler.browser.currentEntry.getId(), is("C11"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -254,11 +255,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
-        assertThat(handler.entries.get(1).getId(), is("M2"));
-        assertThat(handler.entries.get(1).getTitle(), is("Music_02"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.get(1).getId(), is("M2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Music_02"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -293,7 +294,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(browseChannelUID, StringType.valueOf("C11"));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C11"));
+        assertThat(handler.browser.currentEntry.getId(), is("C11"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -306,9 +307,9 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(1));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.size(), is(1));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -344,7 +345,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(browseChannelUID, StringType.valueOf("C1"));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C1"));
+        assertThat(handler.browser.currentEntry.getId(), is("C1"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -357,11 +358,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("All Audio Items")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("C11"));
-        assertThat(handler.entries.get(0).getTitle(), is("Morning Music"));
-        assertThat(handler.entries.get(1).getId(), is("C12"));
-        assertThat(handler.entries.get(1).getTitle(), is("Evening Music"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("C11"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Morning Music"));
+        assertThat(handler.browser.entries.get(1).getId(), is("C12"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Evening Music"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -397,7 +398,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(browseChannelUID, StringType.valueOf("C1"));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C1"));
+        assertThat(handler.browser.currentEntry.getId(), is("C1"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -410,9 +411,9 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("All Audio Items")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(1));
-        assertThat(handler.entries.get(0).getId(), is("C11"));
-        assertThat(handler.entries.get(0).getTitle(), is("Morning Music"));
+        assertThat(handler.browser.entries.size(), is(1));
+        assertThat(handler.browser.entries.get(0).getId(), is("C11"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Morning Music"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -446,7 +447,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(browseChannelUID, StringType.valueOf("C1"));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C11"));
+        assertThat(handler.browser.currentEntry.getId(), is("C11"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -459,11 +460,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("Morning Music")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
-        assertThat(handler.entries.get(1).getId(), is("M2"));
-        assertThat(handler.entries.get(1).getTitle(), is("Music_02"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.get(1).getId(), is("M2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Music_02"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -507,7 +508,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(searchChannelUID, StringType.valueOf(searchString));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C1"));
+        assertThat(handler.browser.currentEntry.getId(), is("C1"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -520,9 +521,9 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("All Audio Items")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(1));
-        assertThat(handler.entries.get(0).getId(), is("C11"));
-        assertThat(handler.entries.get(0).getTitle(), is("Morning Music"));
+        assertThat(handler.browser.entries.size(), is(1));
+        assertThat(handler.browser.entries.get(0).getId(), is("C11"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Morning Music"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -564,7 +565,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(searchChannelUID, StringType.valueOf(searchString));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C11"));
+        assertThat(handler.browser.currentEntry.getId(), is("C11"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -577,11 +578,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("Morning Music")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
-        assertThat(handler.entries.get(1).getId(), is("M2"));
-        assertThat(handler.entries.get(1).getTitle(), is("Music_02"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.get(1).getId(), is("M2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Music_02"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -625,7 +626,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(searchChannelUID, StringType.valueOf(searchString));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("0"));
+        assertThat(handler.browser.currentEntry.getId(), is("0"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -638,9 +639,9 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(1));
-        assertThat(handler.entries.get(0).getId(), is("C11"));
-        assertThat(handler.entries.get(0).getTitle(), is("Morning Music"));
+        assertThat(handler.browser.entries.size(), is(1));
+        assertThat(handler.browser.entries.get(0).getId(), is("C11"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Morning Music"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -682,7 +683,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(searchChannelUID, StringType.valueOf(searchString));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C11"));
+        assertThat(handler.browser.currentEntry.getId(), is("C11"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -695,11 +696,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("Morning Music")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
-        assertThat(handler.entries.get(1).getId(), is("M2"));
-        assertThat(handler.entries.get(1).getTitle(), is("Music_02"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.get(1).getId(), is("M2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Music_02"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -739,7 +740,7 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(searchChannelUID, StringType.valueOf(searchString));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("0"));
+        assertThat(handler.browser.currentEntry.getId(), is("0"));
 
         // Check BROWSE
         ArgumentCaptor<StringType> stringCaptor = ArgumentCaptor.forClass(StringType.class);
@@ -752,11 +753,11 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         assertThat(stringCaptor.getValue(), is(StringType.valueOf("")));
 
         // Check entries
-        assertThat(handler.entries.size(), is(2));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
-        assertThat(handler.entries.get(1).getId(), is("M2"));
-        assertThat(handler.entries.get(1).getTitle(), is("Music_02"));
+        assertThat(handler.browser.entries.size(), is(2));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.get(1).getId(), is("M2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Music_02"));
 
         // Check that BROWSE channel gets the correct state options
         ArgumentCaptor<List<StateOption>> stateOptionListCaptor = ArgumentCaptor.forClass(List.class);
@@ -837,16 +838,16 @@ public class UpnpServerHandlerTest extends UpnpHandlerTest {
         handler.handleCommand(playlistActionChannelUID, StringType.valueOf("RESTORE"));
 
         // Check currentEntry
-        assertThat(handler.currentEntry.getId(), is("C11"));
+        assertThat(handler.browser.currentEntry.getId(), is("C11"));
 
         // Check entries
-        assertThat(handler.entries.size(), is(3));
-        assertThat(handler.entries.get(0).getId(), is("M1"));
-        assertThat(handler.entries.get(0).getTitle(), is("Music_01"));
-        assertThat(handler.entries.get(1).getId(), is("M2"));
-        assertThat(handler.entries.get(1).getTitle(), is("Music_02"));
-        assertThat(handler.entries.get(2).getId(), is("M3"));
-        assertThat(handler.entries.get(2).getTitle(), is("Extra_01"));
+        assertThat(handler.browser.entries.size(), is(3));
+        assertThat(handler.browser.entries.get(0).getId(), is("M1"));
+        assertThat(handler.browser.entries.get(0).getTitle(), is("Music_01"));
+        assertThat(handler.browser.entries.get(1).getId(), is("M2"));
+        assertThat(handler.browser.entries.get(1).getTitle(), is("Music_02"));
+        assertThat(handler.browser.entries.get(2).getId(), is("M3"));
+        assertThat(handler.browser.entries.get(2).getTitle(), is("Extra_01"));
 
         // Delete playlist
         handler.handleCommand(playlistSelectChannelUID, StringType.valueOf("Test_Playlist"));

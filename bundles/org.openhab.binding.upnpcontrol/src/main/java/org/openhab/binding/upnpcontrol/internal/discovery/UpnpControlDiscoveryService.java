@@ -73,7 +73,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
             final @Reference UpnpService upnpService, //
             final @Reference TranslationProvider i18nProvider, //
             final @Reference LocaleProvider localeProvider) {
-        super(5);
+        super(0);
 
         this.supportedThingTypes = UpnpControlBindingConstants.SUPPORTED_THING_TYPES_UIDS;
 
@@ -206,6 +206,9 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
             properties.put("udn", device.getIdentity().getUdn().getIdentifierString());
             properties.put("rootUdn", device.getRoot().getIdentity().getUdn().getIdentifierString());
             properties.put("deviceDescrURL", descriptorURL.toString());
+            properties.put("manufacturer", device.getDetails().getManufacturerDetails().getManufacturer());
+            properties.put("model", device.getDetails().getModelDetails().getModelName());
+            properties.put("serial#", device.getDetails().getSerialNumber());
             URL baseURL = device.getDetails().getBaseURL();
             if (baseURL != null) {
                 properties.put("baseURL", device.getDetails().getBaseURL().toString());
@@ -227,6 +230,7 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
         String serialNumber = device.getDetails().getSerialNumber();
         String udn = device.getIdentity().getUdn().getIdentifierString();
         String rootUdn = device.getRoot().getIdentity().getUdn().getIdentifierString();
+        String host = device.getIdentity().getDescriptorURL().getHost();
         boolean hasSubDevices = device.hasEmbeddedDevices();
         int expireMin = device.getIdentity().getMaxAgeSeconds() / 60;
 
@@ -235,11 +239,11 @@ public class UpnpControlDiscoveryService extends AbstractDiscoveryService implem
                 deviceType, manufacturer, model, serialNumber, udn, rootUdn, hasSubDevices, expireMin);
 
         if ("MediaRenderer".equalsIgnoreCase(deviceType)) {
-            logger.debug("Media renderer found: {}, {}", manufacturer, model);
+            logger.debug("Media renderer found at {}: {}, {}", host, manufacturer, model);
             ThingTypeUID thingTypeUID = THING_TYPE_RENDERER;
             result = new ThingUID(thingTypeUID, udn);
         } else if ("MediaServer".equalsIgnoreCase(deviceType)) {
-            logger.debug("Media server found: {}, {}", manufacturer, model);
+            logger.debug("Media server found at {}: {}, {}", host, manufacturer, model);
             ThingTypeUID thingTypeUID = THING_TYPE_SERVER;
             result = new ThingUID(thingTypeUID, udn);
         }
