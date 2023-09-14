@@ -32,6 +32,7 @@ import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionPro
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicStateDescriptionProvider;
 import org.openhab.binding.upnpcontrol.internal.config.UpnpControlBindingConfiguration;
 import org.openhab.binding.upnpcontrol.internal.config.UpnpControlServerConfiguration;
+import org.openhab.binding.upnpcontrol.internal.util.UpnpControlUtil;
 import org.openhab.core.io.transport.upnp.UpnpIOService;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.thing.Channel;
@@ -52,6 +53,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mark Herwege - Initial contribution
  * @author Karel Goderis - Based on UPnP logic in Sonos binding
+ * @author Mark Herwege - refactor to allow one server to serve multiple renderers
  */
 @NonNullByDefault
 public class UpnpServerHandler extends UpnpHandler {
@@ -65,9 +67,9 @@ public class UpnpServerHandler extends UpnpHandler {
     private @Nullable ChannelUID rendererChannelUID;
 
     private volatile @Nullable CompletableFuture<Boolean> isBrowsing;
-
-    @NonNullByDefault({})
     UpnpServerBrowser browser;
+
+    private volatile String playlistName = "";
 
     protected @NonNullByDefault({}) UpnpControlServerConfiguration config;
 
@@ -80,13 +82,15 @@ public class UpnpServerHandler extends UpnpHandler {
             UpnpControlBindingConfiguration configuration) {
         super(thing, upnpIOService, configuration, upnpStateDescriptionProvider, upnpCommandDescriptionProvider);
         this.upnpRenderers = upnpRenderers;
+
+        // This creates a default browser, not linked to a renderer
+        browser = new UpnpServerBrowser(this);
     }
 
     @Override
     public void initialize() {
         super.initialize();
         config = getConfigAs(UpnpControlServerConfiguration.class);
-        browser = new UpnpServerBrowser(this);
 
         logger.debug("Initializing handler for media server device {} with udn {}", thing.getLabel(), getDeviceUDN());
 
@@ -124,11 +128,19 @@ public class UpnpServerHandler extends UpnpHandler {
         }
 
         if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
-            rendererStateOptionList = Collections.synchronizedList(new ArrayList<>());
+            browser.browse();
+
             synchronized (rendererStateOptionList) {
+                // Create empty state option to allow deselecting renderer (while keeping browse state)
+                StateOption emptyOption = new StateOption("", "");
+                if (!rendererStateOptionList.contains(emptyOption)) {
+                    rendererStateOptionList.add(emptyOption);
+                }
                 upnpRenderers.forEach((key, value) -> {
                     StateOption stateOption = new StateOption(key, value.getThing().getLabel());
-                    rendererStateOptionList.add(stateOption);
+                    if (!rendererStateOptionList.contains(stateOption)) {
+                        rendererStateOptionList.add(stateOption);
+                    }
                 });
             }
             updateRenderersList();
@@ -155,8 +167,9 @@ public class UpnpServerHandler extends UpnpHandler {
      * @param startingIndex starting index of objects to return
      * @param requestedCount number of objects to return, 0 for all
      * @param sortCriteria sort criteria, example: +dc:title
+     * @param callback, set when the result in onValueReceived needs to go to a specific {@link UpnpInvocationCallback}
      */
-    public void browse(String objectID, String browseFlag, String filter, String startingIndex, String requestedCount,
+    void browse(String objectID, String browseFlag, String filter, String startingIndex, String requestedCount,
             String sortCriteria, @Nullable UpnpInvocationCallback callback) {
         CompletableFuture<Boolean> browsing = isBrowsing;
         boolean browsed = true;
@@ -181,7 +194,7 @@ public class UpnpServerHandler extends UpnpHandler {
             inputs.put("RequestedCount", requestedCount);
             inputs.put("SortCriteria", sortCriteria);
 
-            invokeAction(callback, CONTENT_DIRECTORY, "Browse", inputs);
+            invokeAction(CONTENT_DIRECTORY, "Browse", inputs, callback);
         } else {
             logger.debug("Cannot browse, cancelled querying server {}", thing.getLabel());
         }
@@ -201,9 +214,10 @@ public class UpnpServerHandler extends UpnpHandler {
      * @param startingIndex starting index of objects to return
      * @param requestedCount number of objects to return, 0 for all
      * @param sortCriteria sort criteria, example: +dc:title
+     * @param callback, set when the result in onValueReceived needs to go to a specific {@link UpnpInvocationCallback}
      */
-    public void search(String containerID, String searchCriteria, String filter, String startingIndex,
-            String requestedCount, String sortCriteria, @Nullable UpnpInvocationCallback callback) {
+    void search(String containerID, String searchCriteria, String filter, String startingIndex, String requestedCount,
+            String sortCriteria, @Nullable UpnpInvocationCallback callback) {
         CompletableFuture<Boolean> browsing = isBrowsing;
         boolean browsed = true;
         try {
@@ -227,14 +241,15 @@ public class UpnpServerHandler extends UpnpHandler {
             inputs.put("RequestedCount", requestedCount);
             inputs.put("SortCriteria", sortCriteria);
 
-            invokeAction(callback, CONTENT_DIRECTORY, "Search", inputs);
+            invokeAction(CONTENT_DIRECTORY, "Search", inputs, callback);
         } else {
             logger.debug("Cannot search, cancelled querying server {}", thing.getLabel());
         }
     }
 
-    protected void updateServerState(ChannelUID channelUID, State state) {
-        updateState(channelUID, state);
+    @Override
+    protected void updateState(ChannelUID channelUID, State state) {
+        super.updateState(channelUID, state);
     }
 
     @Override
@@ -246,22 +261,22 @@ public class UpnpServerHandler extends UpnpHandler {
                 handleCommandUpnpRenderer(channelUID, command);
                 break;
             case CURRENTTITLE:
-                browser.currentTitle(this, command);
+                browser.handleCommandCurrentTitle(this, command);
                 break;
             case BROWSE:
-                browser.browse(this, command);
+                browser.handleCommandBrowse(this, command);
                 break;
             case SEARCH:
-                browser.search(this, command);
+                browser.handleCommandSearch(this, command);
                 break;
             case PLAYLIST_SELECT:
-                browser.playlistSelect(this, command);
+                handleCommandPlaylistSelect(command);
                 break;
             case PLAYLIST:
-                browser.playlist(this, command);
+                handleCommandPlaylist(command);
                 break;
             case PLAYLIST_ACTION:
-                browser.playlistAction(this, command);
+                handleCommandPlaylistAction(command);
                 break;
             case VOLUME:
             case MUTE:
@@ -274,27 +289,35 @@ public class UpnpServerHandler extends UpnpHandler {
     }
 
     private void handleCommandUpnpRenderer(ChannelUID channelUID, Command command) {
-        UpnpRendererHandler renderer = null;
+        UpnpRendererHandler renderer = currentRendererHandler;
         if (command instanceof StringType) {
             renderer = (upnpRenderers.get(((StringType) command).toString()));
-            currentRendererHandler = renderer;
-
-            UpnpRendererHandler handler = currentRendererHandler;
-
-            if (handler != null) {
-                Channel channel = handler.getThing().getChannel(UPNPSERVER);
-                if (channel != null) {
-                    handler.initServerBrowser(this, new UpnpServerBrowser(browser, handler));
-                }
-            }
         }
 
         if (renderer != null) {
+            if (!renderer.equals(currentRendererHandler)) {
+                browser = new UpnpServerBrowser(browser, renderer);
+            }
+
+            Channel channel = renderer.getThing().getChannel(UPNPSERVER);
+            if (channel != null) {
+                renderer.initServerBrowser(this, browser);
+            }
+
             updateState(channelUID, StringType.valueOf(renderer.getThing().getUID().toString()));
             updateState(VOLUME, renderer.getCurrentVolume());
+            updateState(MUTE, renderer.getCurrentMute());
+            updateState(CONTROL, renderer.getCurrentControl());
         } else {
+            browser = new UpnpServerBrowser(browser, null);
+
             updateState(channelUID, UnDefType.UNDEF);
+            updateState(VOLUME, UnDefType.UNDEF);
+            updateState(MUTE, UnDefType.UNDEF);
+            updateState(CONTROL, UnDefType.UNDEF);
         }
+
+        currentRendererHandler = renderer;
     }
 
     private void handleCommandInRenderer(ChannelUID channelUID, Command command) {
@@ -305,6 +328,47 @@ public class UpnpServerHandler extends UpnpHandler {
             handler.handleCommand(channel.getUID(), command);
         } else if (!STOP.equals(channelId)) {
             updateState(channelId, UnDefType.UNDEF);
+        }
+    }
+
+    private void handleCommandPlaylistSelect(Command command) {
+        if (command instanceof StringType) {
+            playlistName = command.toString();
+            updateState(PLAYLIST, StringType.valueOf(playlistName));
+        }
+    }
+
+    private void handleCommandPlaylist(Command command) {
+        if (command instanceof StringType) {
+            playlistName = command.toString();
+        }
+        updateState(PLAYLIST, StringType.valueOf(playlistName));
+    }
+
+    private void handleCommandPlaylistAction(Command command) {
+        if (command instanceof StringType) {
+            switch (command.toString()) {
+                case RESTORE:
+                    browser.handleCommandPlaylistRestore(this, playlistName);
+                    break;
+                case SAVE:
+                    browser.handleCommandPlaylistSave(false, playlistName);
+                    break;
+                case APPEND:
+                    browser.handleCommandPlaylistSave(true, playlistName);
+                    break;
+                case DELETE:
+                    handleCommandPlaylistDelete();
+                    break;
+            }
+        }
+    }
+
+    private void handleCommandPlaylistDelete() {
+        if (!playlistName.isEmpty()) {
+            UpnpControlUtil.deletePlaylist(playlistName, getBindingConfig().path);
+            UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
+            updateState(PLAYLIST, UnDefType.UNDEF);
         }
     }
 
@@ -319,7 +383,10 @@ public class UpnpServerHandler extends UpnpHandler {
         synchronized (rendererStateOptionList) {
             UpnpRendererHandler handler = upnpRenderers.get(key);
             if (handler != null) {
-                rendererStateOptionList.add(new StateOption(key, handler.getThing().getLabel()));
+                StateOption stateOption = new StateOption(key, handler.getThing().getLabel());
+                if (!rendererStateOptionList.contains(stateOption)) {
+                    rendererStateOptionList.add(stateOption);
+                }
             }
         }
         updateRenderersList();
@@ -350,15 +417,17 @@ public class UpnpServerHandler extends UpnpHandler {
     private void updateRenderersList() {
         ChannelUID uid = rendererChannelUID;
         if (uid != null) {
-            updateStateDescription(uid, rendererStateOptionList);
+            synchronized (rendererStateOptionList) {
+                updateStateDescription(uid, rendererStateOptionList);
+            }
         }
     }
 
     @Override
-    protected void onValueReceived(@Nullable UpnpInvocationCallback callback, @Nullable String variable,
-            @Nullable String value, @Nullable String service) {
+    protected void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service,
+            @Nullable UpnpInvocationCallback callback) {
         if (callback != null && "Result".equals(variable)) {
-            callback.onValueReceived(callback.getHandler(), variable, value, service);
+            callback.onValueReceived(variable, value, service, callback.getHandler());
             return;
         }
 
@@ -374,7 +443,7 @@ public class UpnpServerHandler extends UpnpHandler {
         }
         switch (variable) {
             case "Result":
-                browser.onValueReceived(this, variable, value, service);
+                browser.onValueReceived(variable, value, service, this);
                 break;
             case "NumberReturned":
             case "TotalMatches":
@@ -386,7 +455,7 @@ public class UpnpServerHandler extends UpnpHandler {
         }
     }
 
-    protected void browsingFinished() {
+    void browsingFinished() {
         CompletableFuture<Boolean> browsing = isBrowsing;
         if (browsing != null) { // wait for maximum 2.5s until browsing is finished
             browsing.complete(true);
@@ -400,11 +469,12 @@ public class UpnpServerHandler extends UpnpHandler {
         source.addAll(Arrays.asList(value.split(",")));
     }
 
-    protected @Nullable UpnpRendererHandler getRendererHandler() {
+    @Nullable
+    UpnpRendererHandler getRendererHandler() {
         return currentRendererHandler;
     }
 
-    protected UpnpControlServerConfiguration getServerConfig() {
+    UpnpControlServerConfiguration getServerConfig() {
         return config;
     }
 

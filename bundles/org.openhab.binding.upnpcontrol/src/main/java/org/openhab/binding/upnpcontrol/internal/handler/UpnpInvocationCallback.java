@@ -24,8 +24,16 @@ import org.eclipse.jdt.annotation.Nullable;
 @NonNullByDefault
 public interface UpnpInvocationCallback {
 
-    void onValueReceived(UpnpHandler handler, @Nullable String variable, @Nullable String value,
-            @Nullable String service);
+    /**
+     * Called when UPnP value is received with a specific handler for callback.
+     *
+     * @param variable
+     * @param value
+     * @param service
+     * @param handler
+     */
+    void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service,
+            UpnpHandler handler);
 
     UpnpHandler getHandler();
 }

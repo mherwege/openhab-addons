@@ -39,7 +39,6 @@ import java.util.stream.Stream;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.jupnp.model.meta.RemoteDevice;
-import org.jupnp.model.meta.RemoteService;
 import org.openhab.binding.upnpcontrol.internal.UpnpChannelName;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicCommandDescriptionProvider;
 import org.openhab.binding.upnpcontrol.internal.UpnpDynamicStateDescriptionProvider;
@@ -85,6 +84,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Mark Herwege - Initial contribution
  * @author Karel Goderis - Based on UPnP logic in Sonos binding
+ * @author Mark Herwege - refactor to allow one server to serve multiple renderers
  */
 @NonNullByDefault
 public class UpnpRendererHandler extends UpnpHandler {
@@ -231,11 +231,12 @@ public class UpnpRendererHandler extends UpnpHandler {
         }
 
         if (!ThingStatus.ONLINE.equals(thing.getStatus())) {
-            serverStateOptionList = Collections.synchronizedList(new ArrayList<>());
             synchronized (serverStateOptionList) {
                 upnpServers.forEach((key, value) -> {
                     StateOption stateOption = new StateOption(key, value.getThing().getLabel());
-                    serverStateOptionList.add(stateOption);
+                    if (!serverStateOptionList.contains(stateOption)) {
+                        serverStateOptionList.add(stateOption);
+                    }
                 });
             }
             updateServersList();
@@ -263,7 +264,7 @@ public class UpnpRendererHandler extends UpnpHandler {
     }
 
     @Override
-    public synchronized void updateDeviceConfig(RemoteDevice device) {
+    protected synchronized void updateDeviceConfig(RemoteDevice device) {
         super.updateDeviceConfig(device);
 
         UpnpRenderingControlConfiguration config = new UpnpRenderingControlConfiguration(device);
@@ -360,7 +361,7 @@ public class UpnpRendererHandler extends UpnpHandler {
     /**
      * Invoke Pause on UPnP AV Transport.
      */
-    protected void pause() {
+    void pause() {
         Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
                 Integer.toString(avTransportId));
 
@@ -370,7 +371,7 @@ public class UpnpRendererHandler extends UpnpHandler {
     /**
      * Invoke Next on UPnP AV Transport.
      */
-    protected void next() {
+    void next() {
         Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
                 Integer.toString(avTransportId));
 
@@ -380,7 +381,7 @@ public class UpnpRendererHandler extends UpnpHandler {
     /**
      * Invoke Previous on UPnP AV Transport.
      */
-    protected void previous() {
+    void previous() {
         Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
                 Integer.toString(avTransportId));
 
@@ -392,7 +393,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      *
      * @param seekTarget relative position in current track, format HH:mm:ss
      */
-    protected void seek(String seekTarget) {
+    void seek(String seekTarget) {
         CompletableFuture<Boolean> settingURI = isSettingURI;
         boolean uriSet = true;
         try {
@@ -453,7 +454,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param nextURI
      * @param nextURIMetaData
      */
-    protected void setNextURI(String nextURI, String nextURIMetaData) {
+    void setNextURI(String nextURI, String nextURIMetaData) {
         Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(avTransportId));
         inputs.put("NextURI", nextURI);
@@ -466,7 +467,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Invoke GetTransportState on UPnP AV Transport.
      * Result is received in {@link #onValueReceived}.
      */
-    protected void getTransportState() {
+    void getTransportState() {
         Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
                 Integer.toString(avTransportId));
 
@@ -477,7 +478,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Invoke getPositionInfo on UPnP AV Transport.
      * Result is received in {@link #onValueReceived}.
      */
-    protected void getPositionInfo() {
+    void getPositionInfo() {
         Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
                 Integer.toString(avTransportId));
 
@@ -488,7 +489,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * Invoke GetMediaInfo on UPnP AV Transport.
      * Result is received in {@link #onValueReceived}.
      */
-    protected void getMediaInfo() {
+    void getMediaInfo() {
         Map<@Nullable String, @Nullable String> inputs = Collections.singletonMap(INSTANCE_ID,
                 Integer.toString(avTransportId));
 
@@ -507,11 +508,21 @@ public class UpnpRendererHandler extends UpnpHandler {
         return soundVolume;
     }
 
-    protected State getCurrentMute() {
+    /**
+     * Retrieves current mute state to be able to update server mute state when renderer is selected in server.
+     *
+     * @return
+     */
+    State getCurrentMute() {
         return mute;
     }
 
-    protected State getCurrentControl() {
+    /**
+     * Retrieves current control state to be able to update server control state when renderer is selected in server.
+     *
+     * @return
+     */
+    State getCurrentControl() {
         return control;
     }
 
@@ -521,7 +532,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      *
      * @param channel
      */
-    protected void getVolume(String channel) {
+    private void getVolume(String channel) {
         Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
@@ -535,7 +546,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param channel
      * @param volume
      */
-    protected void setVolume(String channel, PercentType volume) {
+    private void setVolume(String channel, PercentType volume) {
         UpnpRenderingControlConfiguration config = renderingControlConfiguration;
 
         long newVolume = volume.intValue() * config.maxvolume / 100;
@@ -562,7 +573,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      *
      * @param channel
      */
-    protected void getMute(String channel) {
+    void getMute(String channel) {
         Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
@@ -576,7 +587,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param channel
      * @param mute
      */
-    protected void setMute(String channel, OnOffType mute) {
+    void setMute(String channel, OnOffType mute) {
         Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
@@ -591,7 +602,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      *
      * @param channel
      */
-    protected void getLoudness(String channel) {
+    void getLoudness(String channel) {
         Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
@@ -605,7 +616,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      * @param channel
      * @param mute
      */
-    protected void setLoudness(String channel, OnOffType mute) {
+    void setLoudness(String channel, OnOffType mute) {
         Map<@Nullable String, @Nullable String> inputs = new HashMap<>();
         inputs.put(INSTANCE_ID, Integer.toString(rcsId));
         inputs.put("Channel", channel);
@@ -625,11 +636,22 @@ public class UpnpRendererHandler extends UpnpHandler {
                 if (serverChannel != null) {
                     logger.debug("Update server {} channel {} with state {} from renderer {}", serverThing.getLabel(),
                             state, channelUID, thing.getLabel());
-                    handler.updateServerState(serverChannel.getUID(), state);
+                    handler.updateState(serverChannel.getUID(), state);
                 }
             }
         }
         super.updateState(channelUID, state);
+    }
+
+    @Override
+    public void onStatusChanged(boolean status) {
+        if (!status) {
+            removeSubscriptions();
+
+            updateState(CONTROL, PlayPauseType.PAUSE);
+            cancelTrackPositionRefresh();
+        }
+        super.onStatusChanged(status);
     }
 
     @Override
@@ -912,80 +934,37 @@ public class UpnpRendererHandler extends UpnpHandler {
     }
 
     private void handleCommandUpnpServer(ChannelUID channelUID, Command command) {
-        UpnpServerHandler server = null;
+        UpnpServerHandler server = currentServerHandler;
         if (command instanceof StringType) {
             server = (upnpServers.get(((StringType) command).toString()));
         }
 
         if (server != null) {
-            UpnpServerBrowser browser = new UpnpServerBrowser(server, this);
-            initServerBrowser(server, browser);
+            initServerBrowser(server, new UpnpServerBrowser(server, this));
         } else {
+            closeServerConnection();
             updateState(UPNPSERVER, UnDefType.UNDEF);
         }
-    }
-
-    protected void initServerBrowser(UpnpServerHandler server, UpnpServerBrowser browser) {
-        UpnpServerHandler previousServer = currentServerHandler;
-        currentServerHandler = server;
-        if ((previousServer != null) && (server != previousServer)) {
-            connectionComplete(connectionId);
-            previousServer.connectionComplete(peerConnectionId);
-            peerConnectionId = 0;
-        }
-
-        if (server != previousServer) {
-            this.browser = browser;
-            browser.serverBrowse();
-
-            RemoteDevice peerDevice = server.getDevice();
-            if (peerDevice != null
-                    && Stream.of(peerDevice.getServices()).anyMatch(s -> s.getAction("PrepareForConnection") != null)) {
-                RemoteService peerService = UpnpControlUtil.findService(peerDevice, CONNECTION_MANAGER);
-                if (peerService != null) {
-                    browser.prepareForConnection(String.join(",", getSink()), peerService.toString(), -1, "Input");
-                    if (!checkForConnectionIds()) {
-                        String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-                    }
-                }
-            }
-            RemoteDevice device = getDevice();
-            if (device != null
-                    && Stream.of(device.getServices()).anyMatch(s -> s.getAction("PrepareForConnection") != null)) {
-                RemoteService service = UpnpControlUtil.findService(device, CONNECTION_MANAGER);
-                if (service != null) {
-                    prepareForConnection(String.join(",", server.getSource()), service.toString(), peerConnectionId,
-                            "Output");
-                    if (!checkForConnectionIds()) {
-                        String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
-                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
-                    }
-                }
-            }
-        }
-
-        updateState(UPNPSERVER, StringType.valueOf(server.getThing().getUID().toString()));
     }
 
     private void handleCommandCurrentTitle(Command command) {
         UpnpServerBrowser browser = this.browser;
         if (browser != null) {
-            browser.currentTitle(this, command);
+            browser.handleCommandCurrentTitle(this, command);
         }
     }
 
     private void handleCommandBrowse(Command command) {
         UpnpServerBrowser browser = this.browser;
         if (browser != null) {
-            browser.browse(this, command);
+            browser.handleCommandBrowse(this, command);
         }
     }
 
     private void handleCommandSearch(Command command) {
         UpnpServerBrowser browser = this.browser;
         if (browser != null) {
-            browser.search(this, command);
+            browser.handleCommandSearch(this, command);
         }
     }
 
@@ -1031,8 +1010,68 @@ public class UpnpRendererHandler extends UpnpHandler {
     private void updateServersList() {
         ChannelUID uid = serverChannelUID;
         if (uid != null) {
-            updateStateDescription(uid, serverStateOptionList);
+            synchronized (serverStateOptionList) {
+                updateStateDescription(uid, serverStateOptionList);
+            }
         }
+    }
+
+    void initServerBrowser(UpnpServerHandler server, UpnpServerBrowser browser) {
+        if (server != currentServerHandler) {
+            logger.debug("Initializing server browser for {} on {}", this.getThing().getLabel(),
+                    server.getThing().getLabel());
+
+            closeServerConnection();
+            currentServerHandler = server;
+
+            this.browser = browser;
+            browser.browse();
+
+            RemoteDevice peerDevice = server.getDevice();
+            if (peerDevice != null
+                    && Stream.of(peerDevice.getServices()).anyMatch(s -> s.getAction("PrepareForConnection") != null)) {
+                String peerConMgr = server.getConnectionManager();
+                if (!peerConMgr.isEmpty()) {
+                    browser.prepareForConnection(String.join(",", getSink()), peerConMgr, -1, "Input");
+                    if (!checkForConnectionIds()) {
+                        String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+                    }
+                }
+            }
+            RemoteDevice device = getDevice();
+            if (device != null
+                    && Stream.of(device.getServices()).anyMatch(s -> s.getAction("PrepareForConnection") != null)) {
+                String conMgr = this.getConnectionManager();
+                if (!conMgr.isEmpty()) {
+                    prepareForConnection(String.join(",", server.getSource()), conMgr, peerConnectionId, "Output");
+                    if (!checkForConnectionIds()) {
+                        String msg = String.format("@text/offline.no-connection-ids [ \"%s\" ]", config.udn);
+                        updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, msg);
+                    }
+                }
+            }
+        }
+
+        logger.trace(
+                "Connection from renderer {} to server {}: connectionId {}, peerConnectionId {}, avTransportId {}, rcsId {}",
+                this.getThing().getLabel(), server.getThing().getLabel(), connectionId, peerConnectionId, avTransportId,
+                rcsId);
+        updateState(UPNPSERVER, StringType.valueOf(server.getThing().getUID().toString()));
+    }
+
+    private void closeServerConnection() {
+        UpnpServerHandler server = currentServerHandler;
+        connectionComplete(connectionId);
+        if (server != null) {
+            logger.debug("Closing server connection for {} to {}", this.getThing().getLabel(),
+                    server.getThing().getLabel());
+
+            server.connectionComplete(peerConnectionId);
+        }
+        peerConnectionId = 0;
+        currentServerHandler = null;
+        browser = null;
     }
 
     /**
@@ -1147,17 +1186,6 @@ public class UpnpRendererHandler extends UpnpHandler {
     }
 
     @Override
-    public void onStatusChanged(boolean status) {
-        if (!status) {
-            removeSubscriptions();
-
-            updateState(CONTROL, PlayPauseType.PAUSE);
-            cancelTrackPositionRefresh();
-        }
-        super.onStatusChanged(status);
-    }
-
-    @Override
     protected @Nullable String preProcessValueReceived(Map<String, String> inputs, @Nullable String variable,
             @Nullable String value, @Nullable String service, @Nullable String action) {
         if (variable == null) {
@@ -1177,8 +1205,8 @@ public class UpnpRendererHandler extends UpnpHandler {
     }
 
     @Override
-    protected void onValueReceived(@Nullable UpnpInvocationCallback callback, @Nullable String variable,
-            @Nullable String value, @Nullable String service) {
+    protected void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service,
+            @Nullable UpnpInvocationCallback callback) {
         onValueReceived(variable, value, service);
     }
 
@@ -1560,7 +1588,7 @@ public class UpnpRendererHandler extends UpnpHandler {
      *
      * @param queue
      */
-    public void registerQueue(UpnpEntryQueue queue) {
+    void registerQueue(UpnpEntryQueue queue) {
         if (currentQueue.equals(queue)) {
             // We get the same queue, so do nothing
             return;
@@ -1840,6 +1868,11 @@ public class UpnpRendererHandler extends UpnpHandler {
         updateState(TRACK_NUMBER, UnDefType.UNDEF);
     }
 
+    void setPeerConnectionId(int connectionId) {
+        peerConnectionId = connectionId;
+        connectionIdSet();
+    }
+
     /**
      * @return Audio formats supported by the renderer.
      */
@@ -1866,10 +1899,5 @@ public class UpnpRendererHandler extends UpnpHandler {
      */
     public List<String> getSink() {
         return sink;
-    }
-
-    protected void setPeerConnectionId(int connectionId) {
-        peerConnectionId = connectionId;
-        connectionIdSet();
     }
 }

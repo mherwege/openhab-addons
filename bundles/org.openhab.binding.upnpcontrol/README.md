@@ -79,16 +79,54 @@ Thing upnpcontrol:upnprenderer:<rendererId> [udn="<udn of media renderer>", refr
 
 ## Channels
 
-### `upnpserver`
+### `upnprenderer`
 
-The `upnpserver` has the following channels (item type and access mode indicated in brackets):
+The `upnprenderer` has the following default channels:
 
-- `upnprenderer` (String, RW): The renderer to receive media content for playback.
-  
-  The channel allows selecting from all discovered media renderers.
-  This list is dynamically adjusted as media renderers are being added/removed.
+| Channel Type ID    | Item Type   | Access Mode | Description                                        |
+|--------------------|-------------|-------------|----------------------------------------------------|
+| `volume`           | Dimmer      | RW          | playback master volume                             |
+| `mute`             | Switch      | RW          | playback master mute                               |
+| `control`          | Player      | RW          | play, pause, next, previous, fast forward, rewind  |
+| `stop`             | Switch      | W           | stop media playback                                |
+| `repeat`           | Switch      | RW          | continuous play of media queue, restart at end     |
+| `shuffle`          | Switch      | RW          | continuous random play of media queue              |
+| `onlyplayone`      | Switch      | RW          | only play one media entry from the queue at a time |
+| `uri`              | String      | RW          | URI of currently playing media                     |
+| `favoriteselect`   | String      | W           | play favorite from list of saved favorites         |
+| `favorite`         | String      | RW          | set name for existing of new favorite              |
+| `favoriteaction`   | String      | W           | `SAVE` or `DELETE` `favorite`                      |
+| `playlistselect`   | String      | W           | play playlist from list of saved playlists        |
+| `title`            | String      | R           | media title                                        |
+| `album`            | String      | R           | media album                                        |
+| `albumart`         | Image       | R           | image for media album                              |
+| `creator`          | String      | R           | media creator                                      |
+| `artist`           | String      | R           | media artist                                       |
+| `publisher`        | String      | R           | media publisher                                    |
+| `genre`            | String      | R           | media genre                                        |
+| `tracknumber`      | Number      | R           | track number of current track in album             |
+| `trackduration`    | Number:Time | R           | track duration of current track in album           |
+| `trackposition`    | Number:Time | RW          | current position in track during playback or pause |
+| `reltrackposition` | Dimmer      | RW          | current position relative to track duration        |
+| `upnpserver`       | String      | RW          | media server for browsing or searching        |
+| `currenttitle`  | String  | R | current title of media container or entry ready for playback |
+| `browse` | String | RW | browse and serve media content, current ID of media container or entry ready for playback |
+| `search` | String | W | search for media content on the server, using UPnP search criteria format |
 
-- `currenttitle` (String, R): Current title of media container or entry ready for playback.
+A numer of `upnprenderer` audio control channels may be dynamically created depending on the specific renderer capabilities.
+Examples of these are:
+
+| Channel Type ID    | Item Type   | Access Mode | Description                                        |
+|--------------------|-------------|-------------|----------------------------------------------------|
+| `loudness`         | Switch      | RW          | playback master loudness                           |
+| `lfvolume`         | Dimmer      | RW          | playback front left volume                         |
+| `lfmute`           | Switch      | RW          | playback front left mute                           |
+| `rfvolume`         | Dimmer      | RW          | playback front right volume                        |
+| `rfmute`           | Switch      | RW          | playback front right mute                          |
+
+Media browsing and searching channels behave and interact in the following way:
+ 
+- `currenttitle` (String, R): Current title of media container or entry ready for playback, updated by browse or search operations.
 
 - `browse` (String, RW): Browse and serve media content, current ID of media container or entry ready for playback.
 
@@ -100,7 +138,7 @@ The `upnpserver` has the following channels (item type and access mode indicated
   
   All media in the selection list, playable on the currently selected `upnprenderer` channel, are automatically queued to the renderer as next media for playback.
   
-  The `browseDown` configuration parameter influences the result in such a way that, for `browseDown = true`, if the result only contains exactly one container entry, the result will be the content of the container and not the container itself.
+  The `browseDown` configuration parameter on the media server influences the result in such a way that, for `browseDown = true`, if the result only contains exactly one container entry, the result will be the content of the container and not the container itself.
 
 - `search` (String, W): Search for media content on the server.
 
@@ -113,7 +151,29 @@ The `upnpserver` has the following channels (item type and access mode indicated
   
   All media in the search result list, playable on the current selected `upnprenderer` channel, are automatically queued to the renderer as next media for playback.
   
-  The `browseDown` configuration parameter influences the result in such a way that, for `browseDown = true`, if the result only contains exactly one container entry, the result   will be the content of the container and not the container itself.
+  The `browseDown` configuration parameter on the media server influences the result in such a way that, for `browseDown = true`, if the result only contains exactly one container entry, the result will be the content of the container and not the container itself.
+  
+### `upnpserver`
+
+The `upnpserver` has the following channels (item type and access mode indicated in brackets):
+
+- `upnprenderer` (String, RW): The renderer to receive media content for playback.
+  
+  The channel allows selecting from all discovered media renderers.
+  This list is dynamically adjusted as media renderers are being added/removed.
+  Unselecting all renderers still allows browsing and manipulating playlists.
+
+- `currenttitle` (String, R): Current title of media container or entry ready for playback.
+
+  This channel behaves in the same way as the equivalent channel on the media renderer.
+
+- `browse` (String, RW): Browse and serve media content, current ID of media container or entry ready for playback.
+
+  This channel behaves in the same way as the equivalent channel on the media renderer.
+
+- `search` (String, W): Search for media content on the server.
+
+  This channel behaves in the same way as the equivalent channel on the media renderer.
 
 - `playlistselect` (String, W): Select a playlist from the available playlists currently saved on disk.
 
@@ -145,46 +205,9 @@ The `upnpserver` has the following channels (item type and access mode indicated
 A number of convenience channels replicate the basic control channels from the `upnprenderer` thing for the currently selected renderer on the `upnprenderer` channel.
 These channels are `volume`, `mute` and `control`.
 
-### `upnprenderer`
-
-The `upnprenderer` has the following default channels:
-
-| Channel Type ID    | Item Type   | Access Mode | Description                                        |
-|--------------------|-------------|-------------|----------------------------------------------------|
-| `volume`           | Dimmer      | RW          | playback master volume                             |
-| `mute`             | Switch      | RW          | playback master mute                               |
-| `control`          | Player      | RW          | play, pause, next, previous, fast forward, rewind  |
-| `stop`             | Switch      | W           | stop media playback                                |
-| `repeat`           | Switch      | RW          | continuous play of media queue, restart at end     |
-| `shuffle`          | Switch      | RW          | continuous random play of media queue              |
-| `onlyplayone`      | Switch      | RW          | only play one media entry from the queue at a time |
-| `uri`              | String      | RW          | URI of currently playing media                     |
-| `favoriteselect`   | String      | W           | play favorite from list of saved favorites         |
-| `favorite`         | String      | RW          | set name for existing of new favorite              |
-| `favoriteaction`   | String      | W           | `SAVE` or `DELETE` `favorite`                      |
-| `playlistselect`   | String      | W           | play playlist from list of saved playlists        |
-| `title`            | String      | R           | media title                                        |
-| `album`            | String      | R           | media album                                        |
-| `albumart`         | Image       | R           | image for media album                              |
-| `creator`          | String      | R           | media creator                                      |
-| `artist`           | String      | R           | media artist                                       |
-| `publisher`        | String      | R           | media publisher                                    |
-| `genre`            | String      | R           | media genre                                        |
-| `tracknumber`      | Number      | R           | track number of current track in album             |
-| `trackduration`    | Number:Time | R           | track duration of current track in album           |
-| `trackposition`    | Number:Time | RW          | current position in track during playback or pause |
-| `reltrackposition` | Dimmer      | RW          | current position relative to track duration        |
-
-A numer of `upnprenderer` audio control channels may be dynamically created depending on the specific renderer capabilities.
-Examples of these are:
-
-| Channel Type ID    | Item Type   | Access Mode | Description                                        |
-|--------------------|-------------|-------------|----------------------------------------------------|
-| `loudness`         | Switch      | RW          | playback master loudness                           |
-| `lfvolume`         | Dimmer      | RW          | playback front left volume                         |
-| `lfmute`           | Switch      | RW          | playback front left mute                           |
-| `rfvolume`         | Dimmer      | RW          | playback front right volume                        |
-| `rfmute`           | Switch      | RW          | playback front right mute                          |
+The media server `browse` and `search` channels are especially useful for creating playlists.
+They can be used to directly send to the renderer, but would only allow interacting with one renderer at a time.
+Selecting the server on the renderer and browsing/searching from the renderer would allow multiple renderers to have their own independent queries on the server at the same time. 
 
 ## Audio Support
 
@@ -212,14 +235,14 @@ There are multiple ways to serve content to a renderer for playback.
 
 - Content served from one or multiple `upnpserver` servers:
 
-  This is done on the `upnpserver` thing with the `upnprenderer` set the the renderer for playback.
-  The media at any point in time in the `upnpserver browse` option list (result from browse, search or restoring a playlist), will be queued to the `upnprenderer` for playback.
+  This is done on the `upnprenderer` thing with a selected `upnpserver` or on the `upnpserver` thing with the `upnprenderer` set the the renderer for playback.
+  The media at any point in time in the `browse` option list (result from browse, search or restoring a playlist), will be queued to the `upnprenderer` for playback.
   Playback does not start automatically if not yet playing.
   When already playing a queue, the first entry of the new queue will be playing as the next entry.
   When playing an URI or media provided through an action, playback will immediately switch to the new queue.
   
   The `upnprenderer` will use that queue until it is replaced by another queue from the same or another `upnpserver`.
-  Note that querying the content hierarchy on the `upnpserver` will update the `upnpserver browse` option list each time, and therefore the queue on the `upnprenderer` will be updated each time as long as `upnprenderer` is selected on `upnpserver`.
+  Note that querying the content hierarchy on the `upnpserver` will update the `browse` option list each time, and therefore the queue on the `upnprenderer` will be updated each time as long as the `upnpserver` is selected on the `upnprenderer` or the `upnprenderer` is selected on `upnpserver`.
   
 - Selecting a favorite or playlist on the renderer.
 
@@ -302,10 +325,6 @@ BasicUI has a number of limitations that impact the way some of the channels can
 - BasicUI does not support dynamic refreshing of the selection list in the `upnpserver` channels `renderer`, `browse`, `playlistselect` and in the `upnprenderer` channel `favoriteselect`.
   A refresh of the browser will be required to show the adjusted selection list.
 
-- The `upnpserver search` channel requires input of a string to trigger a search.
-  The `upnpserver playlist` channel and `upnprenderer favorite` channel require input of a string to set a playlist or favorite.
-  This cannot be done with BasicUI, but can be achieved with rules.
-
 - The player control in BasicUI does not support fast forward or rewind.
 
 None of these are limitations when using the main UI.
@@ -374,7 +393,7 @@ Switch    item=Repeat
 Switch    item=Shuffle
 Text      item=URI
 Selection item=FavoriteSelect
-Text      item=Favorite
+Input     item=Favorite
 Switch    item=FavoriteAction
 Selection item=PlaylistPlay
 Text      item=Title
@@ -394,7 +413,7 @@ Text      item=CurrentTitle
 Selection item=Browse
 Text      item=Search
 Selection item=PlaylistSelect
-Text      item=Playlist
+Input     item=Playlist
 Switch    item=PlaylistAction
 ```
 

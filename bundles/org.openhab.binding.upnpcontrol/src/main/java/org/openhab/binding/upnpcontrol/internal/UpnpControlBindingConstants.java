@@ -138,5 +138,4 @@ public class UpnpControlBindingConstants {
     public static final String CONTENT_DIRECTORY = "ContentDirectory";
     public static final String DIRECTORY_ROOT = "0";
     public static final String UP = "..";
-
 }

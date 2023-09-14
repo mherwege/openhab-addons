@@ -41,17 +41,18 @@ import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.StateOption;
-import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The {@link UpnpServerBrowser} keeps state of browsing on an media server from a renderer control point.
+ * The {@link UpnpServerBrowser} keeps state of browsing on an media server from a renderer control point. One object is
+ * created each time a renderer connects to a server. A server should keep a default object without renderer reference
+ * set initially to be able to browse and create playlists without renderer defined.
  *
- * @author Mark Herwege - Initial contribution * @author Karel Goderis - Based on UPnP logic in Sonos binding
+ * @author Mark Herwege - Initial contribution
  */
 @NonNullByDefault
-public class UpnpServerBrowser implements UpnpInvocationCallback {
+class UpnpServerBrowser implements UpnpInvocationCallback {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpServerBrowser.class);
 
@@ -69,39 +70,29 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
     // store parents in hierarchy separately to be able to move up in directory structure
     private ConcurrentMap<String, UpnpEntry> parentMap = new ConcurrentHashMap<>();
 
-    private volatile String playlistName = "";
-
-    public UpnpServerBrowser(UpnpServerHandler serverHandler) {
+    UpnpServerBrowser(UpnpServerHandler serverHandler) {
         // there is no rendererHandler for the default browser attached to the server channels
         this(serverHandler, null);
     }
 
-    public UpnpServerBrowser(UpnpServerHandler serverHandler, @Nullable UpnpRendererHandler rendererHandler) {
+    UpnpServerBrowser(UpnpServerHandler serverHandler, @Nullable UpnpRendererHandler rendererHandler) {
         this.serverHandler = serverHandler;
         this.rendererHandler = rendererHandler;
 
         // put root as highest level in parent map
         parentMap.put(ROOT_ENTRY.getId(), ROOT_ENTRY);
-
-        serverBrowse();
-        UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
     }
 
-    public UpnpServerBrowser(UpnpServerBrowser browser, UpnpRendererHandler rendererHandler) {
+    // Copy constructor, copies current browsing state and links to a different renderer
+    UpnpServerBrowser(UpnpServerBrowser browser, @Nullable UpnpRendererHandler rendererHandler) {
         this.serverHandler = browser.serverHandler;
         this.rendererHandler = rendererHandler;
 
         this.browseUp = browser.browseUp;
-        this.playlistName = browser.playlistName;
 
         this.currentEntry = browser.currentEntry;
         this.entries = Collections.synchronizedList(new ArrayList<>(browser.entries));
         this.parentMap = new ConcurrentHashMap<>(browser.parentMap);
-    }
-
-    protected void serverBrowse() {
-        serverHandler.browse(currentEntry.getId(), "BrowseDirectChildren", "*", "0", "0", getConfig().sortCriteria,
-                this);
     }
 
     /**
@@ -113,19 +104,28 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
      * @param peerConnectionId
      * @param direction
      */
-    protected void prepareForConnection(String remoteProtocolInfo, String peerConnectionManager, int peerConnectionId,
+    void prepareForConnection(String remoteProtocolInfo, String peerConnectionManager, int peerConnectionId,
             String direction) {
         serverHandler.prepareForConnection(remoteProtocolInfo, peerConnectionManager, peerConnectionId, direction,
                 this);
     }
 
-    protected void currentTitle(UpnpHandler handler, Command command) {
+    /**
+     * Invoke browse on the UPnP Content Directory Service.
+     * Result is received in {@link #onValueReceived}.
+     */
+    void browse() {
+        serverHandler.browse(currentEntry.getId(), "BrowseDirectChildren", "*", "0", "0", getConfig().sortCriteria,
+                this);
+    }
+
+    void handleCommandCurrentTitle(UpnpHandler handler, Command command) {
         if (command instanceof RefreshType) {
             handler.updateState(CURRENTTITLE, StringType.valueOf(currentEntry.getTitle()));
         }
     }
 
-    protected void browse(UpnpHandler handler, Command command) {
+    void handleCommandBrowse(UpnpHandler handler, Command command) {
         String browseTarget = "";
         if (command instanceof StringType) {
             browseTarget = command.toString();
@@ -171,7 +171,7 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         }
     }
 
-    protected void search(UpnpHandler handler, Command command) {
+    void handleCommandSearch(UpnpHandler handler, Command command) {
         if (command instanceof StringType) {
             String criteria = command.toString();
             if (!criteria.isEmpty()) {
@@ -202,40 +202,7 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         }
     }
 
-    protected void playlistSelect(UpnpHandler handler, Command command) {
-        if (command instanceof StringType) {
-            playlistName = command.toString();
-            handler.updateState(PLAYLIST, StringType.valueOf(playlistName));
-        }
-    }
-
-    protected void playlist(UpnpHandler handler, Command command) {
-        if (command instanceof StringType) {
-            playlistName = command.toString();
-        }
-        handler.updateState(PLAYLIST, StringType.valueOf(playlistName));
-    }
-
-    protected void playlistAction(UpnpHandler handler, Command command) {
-        if (command instanceof StringType) {
-            switch (command.toString()) {
-                case RESTORE:
-                    playlistRestore(handler);
-                    break;
-                case SAVE:
-                    playlistSave(false);
-                    break;
-                case APPEND:
-                    playlistSave(true);
-                    break;
-                case DELETE:
-                    playlistDelete(handler);
-                    break;
-            }
-        }
-    }
-
-    private void playlistRestore(UpnpHandler handler) {
+    void handleCommandPlaylistRestore(UpnpHandler handler, String playlistName) {
         if (!playlistName.isEmpty()) {
             UpnpEntryQueue queue = new UpnpEntryQueue();
             queue.restoreQueue(playlistName, getConfig().udn, getBindingConfig().path);
@@ -261,7 +228,7 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         }
     }
 
-    private void playlistSave(boolean append) {
+    void handleCommandPlaylistSave(boolean append, String playlistName) {
         if (!playlistName.isEmpty()) {
             List<UpnpEntry> mediaQueue = new ArrayList<>();
             mediaQueue.addAll(entries);
@@ -274,15 +241,69 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         }
     }
 
-    private void playlistDelete(UpnpHandler handler) {
-        if (!playlistName.isEmpty()) {
-            UpnpControlUtil.deletePlaylist(playlistName, getBindingConfig().path);
-            UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
-            handler.updateState(PLAYLIST, UnDefType.UNDEF);
+    @Override
+    public void onValueReceived(@Nullable String variable, @Nullable String value, @Nullable String service,
+            UpnpHandler handler) {
+        if (variable == null) {
+            return;
+        }
+        switch (variable) {
+            case CONNECTION_ID:
+                if (handler instanceof UpnpRendererHandler rendererHandler) {
+                    try {
+                        rendererHandler.setPeerConnectionId((value == null) ? 0 : Integer.parseInt(value));
+                    } catch (NumberFormatException e) {
+                    }
+                }
+                break;
+            case "Result":
+                if (!((value == null) || (value.isEmpty()))) {
+                    List<UpnpEntry> list = UpnpXMLParser.getEntriesFromXML(value);
+                    if (getConfig().browseDown && (list.size() == 1) && list.get(0).isContainer() && !browseUp) {
+                        currentEntry = list.get(0);
+                        String browseTarget = currentEntry.getId();
+                        parentMap.put(browseTarget, currentEntry);
+                        logger.debug("Server {}, browsing down one level to the unique container result {}",
+                                serverHandler.getThing().getLabel(), browseTarget);
+                        serverHandler.browse(browseTarget, "BrowseDirectChildren", "*", "0", "0",
+                                getConfig().sortCriteria, this);
+                    } else {
+                        updateTitleSelection(handler, removeDuplicates(list));
+                    }
+                } else {
+                    updateTitleSelection(handler, new ArrayList<UpnpEntry>());
+                }
+                break;
         }
     }
 
-    private void updateTitleSelection(UpnpHandler handler, List<UpnpEntry> titleList) {
+    private void serveMedia() {
+        UpnpRendererHandler handler = getRendererHandler();
+        if (handler != null) {
+            String label = handler.getThing().getLabel();
+            List<UpnpEntry> mediaQueue = new ArrayList<>();
+            mediaQueue.addAll(filterEntries(entries, false));
+            if (mediaQueue.isEmpty() && !currentEntry.isContainer()) {
+                mediaQueue.add(currentEntry);
+            }
+            if (mediaQueue.isEmpty()) {
+                logger.debug("Nothing to serve from server {} to renderer {}", serverHandler.getThing().getLabel(),
+                        label);
+            } else {
+                UpnpEntryQueue queue = new UpnpEntryQueue(mediaQueue, getConfig().udn);
+                handler.registerQueue(queue);
+                logger.debug("Serving media queue {} from server {} to renderer {}", mediaQueue,
+                        serverHandler.getThing().getLabel(), handler.getThing().getLabel());
+
+                // always keep a copy of current list that is being served
+                queue.persistQueue("current" + (label != null ? "-" + label.replace(" ", "_") : ""),
+                        getBindingConfig().path);
+                UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
+            }
+        }
+    }
+
+    void updateTitleSelection(UpnpHandler handler, List<UpnpEntry> titleList) {
         // Optionally, filter only items that can be played on the renderer
         logger.debug("Filtering content on server {}: {}", serverHandler.getThing().getLabel(), getConfig().filter);
         List<UpnpEntry> resultList = getConfig().filter ? filterEntries(titleList, true) : titleList;
@@ -355,53 +376,6 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         return list;
     }
 
-    @Override
-    public UpnpHandler getHandler() {
-        UpnpHandler handler = rendererHandler != null ? rendererHandler : serverHandler;
-        return handler;
-    }
-
-    private @Nullable UpnpRendererHandler getRendererHandler() {
-        UpnpRendererHandler handler = rendererHandler != null ? rendererHandler : serverHandler.getRendererHandler();
-        return handler;
-    }
-
-    @Override
-    public void onValueReceived(UpnpHandler handler, @Nullable String variable, @Nullable String value,
-            @Nullable String service) {
-        if (variable == null) {
-            return;
-        }
-        switch (variable) {
-            case CONNECTION_ID:
-                if (handler instanceof UpnpRendererHandler rendererHandler) {
-                    try {
-                        rendererHandler.setPeerConnectionId((value == null) ? 0 : Integer.parseInt(value));
-                    } catch (NumberFormatException e) {
-                    }
-                }
-                break;
-            case "Result":
-                if (!((value == null) || (value.isEmpty()))) {
-                    List<UpnpEntry> list = UpnpXMLParser.getEntriesFromXML(value);
-                    if (getConfig().browseDown && (list.size() == 1) && list.get(0).isContainer() && !browseUp) {
-                        currentEntry = list.get(0);
-                        String browseTarget = currentEntry.getId();
-                        parentMap.put(browseTarget, currentEntry);
-                        logger.debug("Server {}, browsing down one level to the unique container result {}",
-                                serverHandler.getThing().getLabel(), browseTarget);
-                        serverHandler.browse(browseTarget, "BrowseDirectChildren", "*", "0", "0",
-                                getConfig().sortCriteria, this);
-                    } else {
-                        updateTitleSelection(handler, removeDuplicates(list));
-                    }
-                } else {
-                    updateTitleSelection(handler, new ArrayList<UpnpEntry>());
-                }
-                break;
-        }
-    }
-
     /**
      * Remove double entries by checking the refId if it exists as Id in the list and only keeping the original entry if
      * available. If the original entry is not in the list, only keep one referring entry.
@@ -422,29 +396,15 @@ public class UpnpServerBrowser implements UpnpInvocationCallback {
         return newList;
     }
 
-    protected void serveMedia() {
-        UpnpRendererHandler handler = getRendererHandler();
-        if (handler != null) {
-            String label = handler.getThing().getLabel();
-            List<UpnpEntry> mediaQueue = new ArrayList<>();
-            mediaQueue.addAll(filterEntries(entries, false));
-            if (mediaQueue.isEmpty() && !currentEntry.isContainer()) {
-                mediaQueue.add(currentEntry);
-            }
-            if (mediaQueue.isEmpty()) {
-                logger.debug("Nothing to serve from server {} to renderer {}", serverHandler.getThing().getLabel(),
-                        label);
-            } else {
-                UpnpEntryQueue queue = new UpnpEntryQueue(mediaQueue, getConfig().udn);
-                handler.registerQueue(queue);
-                logger.debug("Serving media queue {} from server {} to renderer {}", mediaQueue,
-                        serverHandler.getThing().getLabel(), handler.getThing().getLabel());
+    @Override
+    public UpnpHandler getHandler() {
+        UpnpHandler handler = rendererHandler != null ? rendererHandler : serverHandler;
+        return handler;
+    }
 
-                // always keep a copy of current list that is being served
-                queue.persistQueue("current" + (label != null ? label.replace(" ", "_") : ""), getBindingConfig().path);
-                UpnpControlUtil.updatePlaylistsList(getBindingConfig().path);
-            }
-        }
+    private @Nullable UpnpRendererHandler getRendererHandler() {
+        UpnpRendererHandler handler = rendererHandler != null ? rendererHandler : serverHandler.getRendererHandler();
+        return handler;
     }
 
     private UpnpControlServerConfiguration getConfig() {

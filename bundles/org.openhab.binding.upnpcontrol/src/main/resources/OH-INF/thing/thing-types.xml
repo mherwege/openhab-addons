@@ -11,6 +11,7 @@
 		<channels>
 			<channel id="volume" typeId="system.volume"/>
 			<channel id="mute" typeId="system.mute"/>
+
 			<channel id="control" typeId="system.media-control"/>
 			<channel id="stop" typeId="stop"/>
 
@@ -36,11 +37,11 @@
 			<channel id="trackduration" typeId="trackduration"/>
 			<channel id="trackposition" typeId="trackposition"/>
 			<channel id="reltrackposition" typeId="reltrackposition"/>
-			
-            <channel id="upnpserver" typeId="upnpserver"/>
-            <channel id="directorytitle" typeId="system.media-title"/>
-            <channel id="browse" typeId="browse"/>
-            <channel id="search" typeId="search"/>
+
+			<channel id="upnpserver" typeId="upnpserver"/>
+			<channel id="directorytitle" typeId="system.media-title"/>
+			<channel id="browse" typeId="browse"/>
+			<channel id="search" typeId="search"/>
 		</channels>
 		<representation-property>udn</representation-property>
 		<config-description>
@@ -251,11 +252,11 @@
 		<description>Track position as percentage of track duration</description>
 		<category>MediaControl</category>
 	</channel-type>
-    <channel-type id="upnpserver">
-        <item-type>String</item-type>
-        <label>Server</label>
-        <description>Select AV server</description>
-    </channel-type>
+	<channel-type id="upnpserver">
+		<item-type>String</item-type>
+		<label>Server</label>
+		<description>Select AV server</description>
+	</channel-type>
 	<channel-type id="upnprenderer">
 		<item-type>String</item-type>
 		<label>Renderer</label>

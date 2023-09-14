@@ -41,7 +41,8 @@ public class UpnpAudioSink extends AudioSinkAsync {
 
     private final Logger logger = LoggerFactory.getLogger(UpnpAudioSink.class);
 
-    private static final Set<@Nullable Class<? extends @Nullable AudioStream>> SUPPORTED_STREAMS = Set.of(AudioStream.class);
+    private static final Set<@Nullable Class<? extends @Nullable AudioStream>> SUPPORTED_STREAMS = Set
+            .of(AudioStream.class);
     protected UpnpRendererHandler handler;
     protected AudioHTTPServer audioHTTPServer;
     protected String callbackUrl;
