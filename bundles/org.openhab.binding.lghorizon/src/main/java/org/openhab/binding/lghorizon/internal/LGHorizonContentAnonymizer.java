@@ -1,0 +1,233 @@
+/*
+ * Copyright (c) 2010-2026 Contributors to the openHAB project
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+package org.openhab.binding.lghorizon.internal;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+
+/**
+ * Static methods to remove sensitive content from captured LG Horizon REST/MQTT payloads, for use in the
+ * {@code lghorizon fingerprint} console command.
+ * <p>
+ * Two anonymization styles are used, matching what's actually useful to a maintainer analyzing a dump:
+ * <ul>
+ * <li>Fields worth correlating across a dump (the same device/customer/profile appearing in several files)
+ * get a stable per-value placeholder via a counter map, so repeated occurrences of the same real value always
+ * anonymize to the same placeholder within a session.</li>
+ * <li>Fields with no cross-referencing value (MAC/IP addresses) get a single fixed placeholder.</li>
+ * </ul>
+ *
+ * @author Mark - Initial contribution
+ */
+@NonNullByDefault
+public final class LGHorizonContentAnonymizer {
+
+    private static final Map<String, String> CUSTOMER_ID_MAP = new HashMap<>();
+    private static final AtomicInteger CUSTOMER_ID_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> HASHED_ID_MAP = new HashMap<>();
+    private static final AtomicInteger HASHED_ID_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> DEVICE_ID_MAP = new HashMap<>();
+    private static final AtomicInteger DEVICE_ID_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> DEVICE_NAME_MAP = new HashMap<>();
+    private static final AtomicInteger DEVICE_NAME_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> SERIAL_MAP = new HashMap<>();
+    private static final AtomicInteger SERIAL_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> PROFILE_ID_MAP = new HashMap<>();
+    private static final AtomicInteger PROFILE_ID_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> AD_DEVICE_ID_MAP = new HashMap<>();
+    private static final AtomicInteger AD_DEVICE_ID_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> PIN_MAP = new HashMap<>();
+    private static final AtomicInteger PIN_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> TOKEN_MAP = new HashMap<>();
+    private static final AtomicInteger TOKEN_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> HOUSEHOLD_ID_MAP = new HashMap<>();
+    private static final AtomicInteger HOUSEHOLD_ID_COUNTER = new AtomicInteger();
+
+    private static final Map<String, String> CITY_ID_MAP = new HashMap<>();
+    private static final AtomicInteger CITY_ID_COUNTER = new AtomicInteger();
+
+    // Field-name-scoped patterns: "<fieldName>":"<value>" (value may be empty)
+    private static final Pattern CUSTOMER_ID_PATTERN = fieldPattern("customerId");
+    private static final Pattern HASHED_ID_PATTERN = fieldPattern("hashed\\w*Id");
+    private static final Pattern DEVICE_ID_PATTERN = fieldPattern("deviceId");
+    private static final Pattern DEVICE_NAME_PATTERN = fieldPattern("deviceFriendlyName");
+    private static final Pattern SERIAL_PATTERN = fieldPattern("serialNumber");
+    private static final Pattern PROFILE_ID_PATTERN = fieldPattern("profileId");
+    private static final Pattern DEFAULT_PROFILE_ID_PATTERN = fieldPattern("defaultProfileId");
+    private static final Pattern AD_DEVICE_ID_PATTERN = fieldPattern("advertisementDeviceId");
+    private static final Pattern PIN_PATTERN = fieldPattern("pin");
+    private static final Pattern TOKEN_PATTERN = fieldPattern("(claimsToken|token)");
+
+    // Content-shape patterns, not scoped to a specific field name.
+    private static final Pattern MAC_ADDRESS_PATTERN = fieldPattern("\\w*[Mm]ac\\w*",
+            "([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}");
+    private static final Pattern IP_ADDRESS_PATTERN = fieldPattern("\\w*[Ii][Pp]\\w*",
+            "(\\d{1,3}\\.){3}\\d{1,3}(/(\\d{1,3}\\.){3}\\d{1,3})?");
+    // cityId is a Liberty Global city/region identifier that keys the local channel line-up - close enough
+    // to a postcode to be too specific to leave in. Unlike every field above, it's an unquoted JSON number
+    // ("cityId":12345, no quotes around the value), so it needs its own pattern rather than fieldPattern()
+    // (which always expects a quoted value) - and it separately appears as a URL query parameter
+    // (?cityId=12345&...) in the channel-fetch URL, a third shape again. Both are handled here, sharing the
+    // same map/counter so the same real value maps to the same placeholder in either context.
+    private static final Pattern CITY_ID_JSON_PATTERN = Pattern
+            .compile("(?<leading>\"cityId\"\\s*:\\s*)(?<value>\\d+)");
+    private static final Pattern CITY_ID_URL_PATTERN = Pattern.compile("(?<leading>[?&]cityId=)(?<value>\\d+)");
+    // The household id shape (e.g. "DTV123456_be") also appears bare inside MQTT topic strings, not just as
+    // a JSON field value, so this one is not field-name-scoped at all - it matches the token shape anywhere.
+    private static final Pattern HOUSEHOLD_ID_PATTERN = Pattern.compile("\\b[A-Z]{2,6}\\d{4,10}_[a-z]{2}\\b");
+
+    private LGHorizonContentAnonymizer() {
+        // static utility class
+    }
+
+    private static Pattern fieldPattern(String fieldNameRegex) {
+        return fieldPattern(fieldNameRegex, "[^\"]*");
+    }
+
+    private static Pattern fieldPattern(String fieldNameRegex, String valueRegex) {
+        return Pattern.compile("(?<leading>\"" + fieldNameRegex + "\")\\s*:\\s*\"(?<value>" + valueRegex + ")\"");
+    }
+
+    /**
+     * Anonymizes an MQTT topic string (may contain an embedded household id, e.g.
+     * {@code DTV123456_be/E0B7B1-APPSTB-301179302106/status}).
+     */
+    public static @Nullable String anonymizeTopic(@Nullable String topic) {
+        if (topic == null) {
+            return null;
+        }
+        String withCityId = replaceNumericField(topic, CITY_ID_URL_PATTERN, CITY_ID_MAP, CITY_ID_COUNTER);
+        return replaceConsistently(withCityId, HOUSEHOLD_ID_PATTERN, "HOUSEHOLD_", HOUSEHOLD_ID_MAP,
+                HOUSEHOLD_ID_COUNTER);
+    }
+
+    /**
+     * Anonymizes a JSON (or plain text) payload: REST response bodies, MQTT message bodies, or anything else
+     * that might contain the sensitive fields listed on this class.
+     */
+    public static @Nullable String anonymizeMessage(@Nullable String message) {
+        if (message == null) {
+            return null;
+        }
+
+        String anonymized = message;
+        anonymized = replaceField(anonymized, CUSTOMER_ID_PATTERN, "CUSTOMER_", CUSTOMER_ID_MAP, CUSTOMER_ID_COUNTER);
+        anonymized = replaceField(anonymized, HASHED_ID_PATTERN, "HASHED_", HASHED_ID_MAP, HASHED_ID_COUNTER);
+        anonymized = replaceField(anonymized, DEVICE_ID_PATTERN, "DEVICE_", DEVICE_ID_MAP, DEVICE_ID_COUNTER);
+        anonymized = replaceField(anonymized, DEVICE_NAME_PATTERN, "DEVICE_NAME_", DEVICE_NAME_MAP,
+                DEVICE_NAME_COUNTER);
+        anonymized = replaceField(anonymized, SERIAL_PATTERN, "SERIAL_", SERIAL_MAP, SERIAL_COUNTER);
+        anonymized = replaceField(anonymized, PROFILE_ID_PATTERN, "PROFILE_", PROFILE_ID_MAP, PROFILE_ID_COUNTER);
+        anonymized = replaceField(anonymized, DEFAULT_PROFILE_ID_PATTERN, "PROFILE_", PROFILE_ID_MAP,
+                PROFILE_ID_COUNTER);
+        anonymized = replaceField(anonymized, AD_DEVICE_ID_PATTERN, "AD_DEVICE_", AD_DEVICE_ID_MAP,
+                AD_DEVICE_ID_COUNTER);
+        anonymized = replaceField(anonymized, PIN_PATTERN, "PIN_", PIN_MAP, PIN_COUNTER);
+        anonymized = replaceField(anonymized, TOKEN_PATTERN, "TOKEN_", TOKEN_MAP, TOKEN_COUNTER);
+        anonymized = replaceNumericField(anonymized, CITY_ID_JSON_PATTERN, CITY_ID_MAP, CITY_ID_COUNTER);
+        anonymized = replaceNumericField(anonymized, CITY_ID_URL_PATTERN, CITY_ID_MAP, CITY_ID_COUNTER);
+        anonymized = replaceFixed(anonymized, MAC_ADDRESS_PATTERN, "xx:xx:xx:xx:xx:xx");
+        anonymized = replaceFixed(anonymized, IP_ADDRESS_PATTERN, "xxx.xxx.xxx.xxx");
+        anonymized = replaceConsistently(anonymized, HOUSEHOLD_ID_PATTERN, "HOUSEHOLD_", HOUSEHOLD_ID_MAP,
+                HOUSEHOLD_ID_COUNTER);
+        return anonymized;
+    }
+
+    /**
+     * Replaces every match of an unquoted {@code field:123} or {@code field=123} numeric pattern, mapping
+     * each distinct value consistently. The replacement is itself numeric (not wrapped in quotes) so JSON
+     * stays syntactically valid and the field's original type (a number, not a string) is preserved.
+     */
+    private static String replaceNumericField(String content, Pattern pattern, Map<String, String> map,
+            AtomicInteger counter) {
+        Matcher matcher = pattern.matcher(content);
+        StringBuilder result = new StringBuilder();
+        int last = 0;
+        while (matcher.find()) {
+            result.append(content, last, matcher.start());
+            String value = matcher.group("value");
+            String anonymous = map.computeIfAbsent(value, v -> String.valueOf(10000 + counter.incrementAndGet()));
+            result.append(matcher.group("leading")).append(anonymous);
+            last = matcher.end();
+        }
+        result.append(content, last, content.length());
+        return result.toString();
+    }
+
+    /** Replaces every match of a {@code "field":"value"} pattern, mapping each distinct value consistently. */
+    private static String replaceField(String content, Pattern pattern, String placeholderPrefix,
+            Map<String, String> map, AtomicInteger counter) {
+        Matcher matcher = pattern.matcher(content);
+        StringBuilder result = new StringBuilder();
+        int last = 0;
+        while (matcher.find()) {
+            result.append(content, last, matcher.start());
+            String value = matcher.group("value");
+            if (value.isEmpty()) {
+                result.append(matcher.group());
+            } else {
+                String anonymous = map.computeIfAbsent(value, v -> placeholderPrefix + counter.incrementAndGet());
+                result.append(matcher.group("leading")).append(":\"").append(anonymous).append('"');
+            }
+            last = matcher.end();
+        }
+        result.append(content, last, content.length());
+        return result.toString();
+    }
+
+    /** Replaces every match of a {@code "field":"value"} pattern with the same fixed placeholder value. */
+    private static String replaceFixed(String content, Pattern pattern, String placeholder) {
+        Matcher matcher = pattern.matcher(content);
+        StringBuilder result = new StringBuilder();
+        int last = 0;
+        while (matcher.find()) {
+            result.append(content, last, matcher.start());
+            result.append(matcher.group("leading")).append(":\"").append(placeholder).append('"');
+            last = matcher.end();
+        }
+        result.append(content, last, content.length());
+        return result.toString();
+    }
+
+    /** Replaces every bare match of a pattern (not field-name-scoped), mapping each distinct value consistently. */
+    private static String replaceConsistently(String content, Pattern pattern, String placeholderPrefix,
+            Map<String, String> map, AtomicInteger counter) {
+        Matcher matcher = pattern.matcher(content);
+        StringBuilder result = new StringBuilder();
+        int last = 0;
+        while (matcher.find()) {
+            result.append(content, last, matcher.start());
+            String value = matcher.group();
+            String anonymous = map.computeIfAbsent(value, v -> placeholderPrefix + counter.incrementAndGet());
+            result.append(anonymous);
+            last = matcher.end();
+        }
+        result.append(content, last, content.length());
+        return result.toString();
+    }
+}
