@@ -1,0 +1,29 @@
+{
+	"vin": "WBA00000000000001",
+	"entityId": "00000000-0000-0000-0000-000000000000",
+	"topic": "WBA00000000000001",
+	"timestamp": "2026-10-20T08:00:05Z",
+	"data": {
+		"vehicle.drivetrain.batteryManagement.header": {
+			"timestamp": "2026-10-20T08:00:00Z",
+			"unit": "%",
+			"value": 62
+		},
+		"vehicle.drivetrain.electricEngine.charging.status": {
+			"timestamp": "2026-10-20T08:00:00Z",
+			"value": "CHARGINGACTIVE"
+		},
+		"vehicle.isMoving": {
+			"value": false
+		},
+		"vehicle.cabin.door.status": {
+			"timestamp": "2026-10-20T08:00:00Z",
+			"value": {
+				"oldDoorStatus": "ASN_secured",
+				"newDoorStatus": "ASN_locked",
+				"allDoorsLocked": "ASN_isTrue",
+				"trunkLocked": "ASN_isTrue"
+			}
+		}
+	}
+}

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config-description:config-descriptions
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:config-description="https://openhab.org/schemas/config-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/config-description/v1.0.0 https://openhab.org/schemas/config-description-1.0.0.xsd">
+
+	<config-description uri="thing-type:mybmw:account">
+		<parameter-group name="cardata">
+			<label>CarData</label>
+			<description>Client registration in the MyBMW / CarData customer portal</description>
+		</parameter-group>
+		<parameter-group name="broker">
+			<label>Stream Broker</label>
+			<description>Local MQTT broker the bmw-mqtt-bridge republishes the CarData stream to</description>
+		</parameter-group>
+		<parameter-group name="rest">
+			<label>REST Requests</label>
+			<description>BMW allows 50 REST requests per account per day</description>
+		</parameter-group>
+
+		<parameter name="clientId" type="text" required="true" groupName="cardata">
+			<label>Client ID</label>
+			<description>CarData client ID generated in the customer portal, subscribed to both CarData API and CarData
+				Stream</description>
+		</parameter>
+
+		<parameter name="brokerHost" type="text" required="true" groupName="broker">
+			<context>network-address</context>
+			<label>Broker Host</label>
+			<description>Host name or IP address of the broker the bridge publishes to</description>
+		</parameter>
+		<parameter name="brokerPort" type="integer" min="1" max="65535" groupName="broker">
+			<label>Broker Port</label>
+			<default>1883</default>
+		</parameter>
+		<parameter name="brokerSecure" type="boolean" groupName="broker">
+			<label>Use TLS</label>
+			<default>false</default>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="brokerUsername" type="text" groupName="broker">
+			<label>Broker Username</label>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="brokerPassword" type="text" groupName="broker">
+			<context>password</context>
+			<label>Broker Password</label>
+			<advanced>true</advanced>
+		</parameter>
+		<parameter name="topicPrefix" type="text" groupName="broker">
+			<label>Topic Prefix</label>
+			<description>The LOCAL_PREFIX configured in the bridge</description>
+			<default>bmw/</default>
+			<advanced>true</advanced>
+		</parameter>
+
+		<parameter name="refreshInterval" type="integer" min="0" max="24" unit="h" groupName="rest">
+			<label>Refresh Interval</label>
+			<description>Hours between REST refreshes of all vehicle values, one request per vehicle. 0 disables the
+				periodic
+				refresh; values are still fetched at startup and after stream outages.</description>
+			<default>6</default>
+		</parameter>
+		<parameter name="requestBudget" type="integer" min="1" max="50" groupName="rest">
+			<label>Request Budget</label>
+			<description>Maximum number of REST requests the binding sends in 24 hours. Keep it below BMW's limit of 50 if
+				other
+				tools use the same account.</description>
+			<default>40</default>
+			<advanced>true</advanced>
+		</parameter>
+	</config-description>
+
+	<config-description uri="thing-type:mybmw:vehicle">
+		<parameter name="vin" type="text" required="true" pattern="[A-HJ-NPR-Za-hj-npr-z0-9]{17}">
+			<label>Vehicle Identification Number</label>
+			<description>VIN of the vehicle, 17 characters</description>
+		</parameter>
+	</config-description>
+
+</config-description:config-descriptions>
