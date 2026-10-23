@@ -18,6 +18,7 @@ import java.util.Map;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.mybmw.internal.api.CarDataApi;
 import org.openhab.core.auth.client.oauth2.AccessTokenResponse;
 import org.openhab.core.auth.client.oauth2.OAuthException;
 import org.openhab.core.auth.client.oauth2.OAuthResponseException;
@@ -93,11 +94,22 @@ public final class CarDataTokens {
      * @return the equivalent binding exception, so it is handled like errors of the device authorization
      */
     public static CarDataAuthException toAuthException(OAuthResponseException e) {
-        // the fields are filled by Gson, so they can be null or empty despite their declaration
-        @Nullable
         String error = e.getError();
-        return new CarDataAuthException(error == null || error.isBlank() ? "unknown_error" : error,
-                e.getErrorDescription());
+        return new CarDataAuthException(error.isBlank() ? "unknown_error" : error, e.getErrorDescription());
+    }
+
+    /**
+     * Recognizes a token endpoint that answered 401, which BMW does when the client or the refresh token is no longer
+     * valid. Core's OAuth client reports it as an I/O error, see {@link CarDataApi#isUnauthorizedResponse(Throwable)}.
+     *
+     * @param e failure of a token request
+     * @return an exception that requires a new authorization when the token endpoint answered 401, {@code null}
+     *         otherwise
+     */
+    public static @Nullable CarDataAuthException fromUnauthorizedResponse(Throwable e) {
+        return CarDataApi.isUnauthorizedResponse(e)
+                ? new CarDataAuthException(CarDataAuthException.INVALID_GRANT, "token endpoint answered HTTP 401")
+                : null;
     }
 
     /**

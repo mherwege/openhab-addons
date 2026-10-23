@@ -136,6 +136,7 @@ class TelematicChannelTest {
                     assertEquals(dimension, UnitUtils.getDimensionName(unit),
                             mapping + " unit does not fit " + itemType);
                 }
+                case NUMBER -> assertEquals("Number", itemType, mapping.toString());
                 case SWITCH -> assertEquals("Switch", itemType, mapping.toString());
                 case CONTACT -> assertEquals("Contact", itemType, mapping.toString());
                 case OPENING -> {

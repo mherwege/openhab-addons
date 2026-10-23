@@ -21,6 +21,8 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
  */
 @NonNullByDefault
 public enum StreamState {
+    /** The first connection attempt to the broker the binding subscribes to has not finished yet */
+    CONNECTING,
     /** Not connected to the broker the binding subscribes to */
     DISCONNECTED,
     /** Connected to the local broker, but the bridge reports it is not connected to BMW */

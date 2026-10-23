@@ -17,6 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.mybmw.internal.LogRedaction;
 import org.openhab.binding.mybmw.internal.stream.StreamMessageParser.StreamMessage;
 import org.openhab.core.io.transport.mqtt.MqttBrokerConnection;
 import org.openhab.core.io.transport.mqtt.MqttConnectionObserver;
@@ -62,6 +63,7 @@ public class BridgeStreamSource implements StreamSource, MqttMessageSubscriber, 
     private @Nullable MqttBrokerConnection connection;
     private volatile boolean stopped = true;
     private volatile boolean localConnected = false;
+    private volatile boolean firstAttemptDone = false;
     private volatile @Nullable Boolean upstreamConnected;
     private volatile @Nullable StreamState lastState;
 
@@ -97,6 +99,7 @@ public class BridgeStreamSource implements StreamSource, MqttMessageSubscriber, 
         }
         stopped = false;
         localConnected = false;
+        firstAttemptDone = false;
         upstreamConnected = null;
         lastState = null;
 
@@ -141,6 +144,9 @@ public class BridgeStreamSource implements StreamSource, MqttMessageSubscriber, 
             return;
         }
         localConnected = state == MqttConnectionState.CONNECTED;
+        if (state != MqttConnectionState.CONNECTING) {
+            firstAttemptDone = true;
+        }
         if (!localConnected) {
             // the retained status message is delivered again on reconnect
             upstreamConnected = null;
@@ -153,6 +159,10 @@ public class BridgeStreamSource implements StreamSource, MqttMessageSubscriber, 
         if (stopped) {
             return;
         }
+        if (logger.isTraceEnabled()) {
+            logger.trace("Message on {}: {}", LogRedaction.vins(topic),
+                    LogRedaction.payload(new String(payload, StandardCharsets.UTF_8)));
+        }
         if (topic.equals(statusTopic)) {
             Boolean connected = parseStatus(payload);
             if (connected != null) {
@@ -163,7 +173,7 @@ public class BridgeStreamSource implements StreamSource, MqttMessageSubscriber, 
         }
         StreamMessage message = StreamMessageParser.parse(topic, payload);
         if (message == null) {
-            logger.debug("Ignoring message on {} that is not a CarData envelope", topic);
+            logger.debug("Ignoring message on {} that is not a CarData envelope", LogRedaction.vins(topic));
             return;
         }
         if (!Boolean.TRUE.equals(upstreamConnected)) {
@@ -187,7 +197,7 @@ public class BridgeStreamSource implements StreamSource, MqttMessageSubscriber, 
             StreamState state;
             Boolean upstream = upstreamConnected;
             if (!localConnected) {
-                state = StreamState.DISCONNECTED;
+                state = firstAttemptDone ? StreamState.DISCONNECTED : StreamState.CONNECTING;
             } else if (upstream == null) {
                 state = StreamState.CONNECTED_UPSTREAM_UNKNOWN;
             } else {

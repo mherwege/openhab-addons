@@ -22,12 +22,14 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.measure.Unit;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DateTimeType;
+import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.OpenClosedType;
 import org.openhab.core.library.types.QuantityType;
@@ -60,9 +62,14 @@ public final class TelematicStateConverter {
     private static final Set<String> CLOSED_WORDS = Set.of("CLOSED", "FALSE", "ISFALSE");
 
     /** Date formats BMW documents for the legal inspection date, besides ISO-8601 instants. */
+    private static final Pattern EPOCH = Pattern.compile("\\d{9,13}");
+    // seconds since the epoch stay below this until the year 5138, milliseconds exceed it since 1973
+    private static final long EPOCH_MILLIS_THRESHOLD = 100_000_000_000L;
     private static final List<DateTimeFormatter> DATE_TIME_FORMATS = List.of(
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss 'UTC'", Locale.ROOT),
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm 'UTC'", Locale.ROOT),
-            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm 'UTC'", Locale.ROOT));
+            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss 'UTC'", Locale.ROOT),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm 'UTC'", Locale.ROOT), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
             DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.ROOT),
             DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ROOT), DateTimeFormatter.ISO_LOCAL_DATE);
@@ -86,6 +93,10 @@ public final class TelematicStateConverter {
         }
         return switch (mapping.getKind()) {
             case QUANTITY -> toQuantity(raw, value.unit(), mapping.getDefaultUnit());
+            case NUMBER -> {
+                BigDecimal number = toNumber(raw);
+                yield number != null ? new DecimalType(number) : UnDefType.UNDEF;
+            }
             case SWITCH -> toSwitch(raw);
             case CONTACT, OPENING -> toContact(raw);
             case STRING -> toStringState(raw);
@@ -242,6 +253,12 @@ public final class TelematicStateConverter {
             return UnDefType.UNDEF;
         }
         String text = raw.getAsString().strip();
+        if (EPOCH.matcher(text).matches()) {
+            // e.g. the end of the last trip, in seconds since the epoch despite the documented date format
+            long epoch = Long.parseLong(text);
+            return new DateTimeType(
+                    epoch > EPOCH_MILLIS_THRESHOLD ? Instant.ofEpochMilli(epoch) : Instant.ofEpochSecond(epoch));
+        }
         try {
             return new DateTimeType(Instant.parse(text));
         } catch (DateTimeParseException e) {

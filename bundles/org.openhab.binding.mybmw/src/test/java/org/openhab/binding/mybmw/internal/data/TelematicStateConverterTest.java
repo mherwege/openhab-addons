@@ -20,6 +20,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.Test;
 import org.openhab.core.library.types.DateTimeType;
+import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.OpenClosedType;
 import org.openhab.core.library.types.QuantityType;
@@ -126,6 +127,12 @@ class TelematicStateConverterTest {
     }
 
     @Test
+    void numberHasNoUnit() {
+        assertEquals(new DecimalType(1065), convert(TelematicChannel.PLUG_EVENT, "1065", null));
+        assertEquals(UnDefType.UNDEF, convert(TelematicChannel.PLUG_EVENT, "\"none\"", null));
+    }
+
+    @Test
     void stringKeepsValue() {
         assertEquals(new StringType("CHARGINGACTIVE"),
                 convert(TelematicChannel.CHARGING_STATUS, "\"CHARGINGACTIVE\"", null));
@@ -140,5 +147,22 @@ class TelematicStateConverterTest {
         assertEquals(expected, convert(TelematicChannel.INSPECTION_DATE, "\"2027-03-01T00:00:00Z\"", null));
         assertEquals(expected, convert(TelematicChannel.INSPECTION_DATE, "\"2027-03-01\"", null));
         assertEquals(UnDefType.UNDEF, convert(TelematicChannel.INSPECTION_DATE, "\"next spring\"", null));
+    }
+
+    @Test
+    void tripEndTimeInEpochSeconds() {
+        // as the REST API sends it, despite the documented date format
+        DateTimeType expected = new DateTimeType(Instant.parse("2026-10-23T11:11:44Z"));
+        assertEquals(expected, convert(TelematicChannel.TRIP_END_TIME, "\"1792753904\"", null));
+        assertEquals(expected, convert(TelematicChannel.TRIP_END_TIME, "1792753904", null));
+        assertEquals(expected, convert(TelematicChannel.TRIP_END_TIME, "1792753904000", null));
+    }
+
+    @Test
+    void tripEndTimeHasSeconds() {
+        assertEquals(new DateTimeType(Instant.parse("2017-05-15T15:51:00Z")),
+                convert(TelematicChannel.TRIP_END_TIME, "\"15.05.2017 15:51:00 UTC\"", null));
+        assertEquals(new DateTimeType(Instant.parse("2017-05-15T15:51:00Z")),
+                convert(TelematicChannel.TRIP_END_TIME, "\"2017-05-15T15:51:00\"", null));
     }
 }

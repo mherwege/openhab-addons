@@ -29,6 +29,8 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.util.Fields;
+import org.openhab.binding.mybmw.internal.LogRedaction;
+import org.openhab.binding.mybmw.internal.api.CarDataApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,8 +56,9 @@ public class CarDataAuthenticator {
     public static final String SCOPE_STREAMING = "cardata:streaming:read";
 
     private static final String BASE_URL = "https://customer.bmwgroup.com";
-    private static final String DEVICE_CODE_URL = BASE_URL + "/gcdm/oauth/device/code";
-    public static final String TOKEN_URL = BASE_URL + "/gcdm/oauth/token";
+    private static final String DEVICE_CODE_PATH = "/gcdm/oauth/device/code";
+    private static final String TOKEN_PATH = "/gcdm/oauth/token";
+    public static final String TOKEN_URL = BASE_URL + TOKEN_PATH;
     private static final String SCOPES = "authenticate_user openid " + SCOPE_API + " " + SCOPE_STREAMING;
     private static final String GRANT_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
 
@@ -67,10 +70,19 @@ public class CarDataAuthenticator {
 
     private final HttpClient httpClient;
     private final String clientId;
+    private final String deviceCodeUrl;
+    private final String tokenUrl;
 
     public CarDataAuthenticator(HttpClient httpClient, String clientId) {
+        this(httpClient, clientId, BASE_URL);
+    }
+
+    // for tests against a local server
+    CarDataAuthenticator(HttpClient httpClient, String clientId, String baseUrl) {
         this.httpClient = httpClient;
         this.clientId = clientId;
+        this.deviceCodeUrl = baseUrl + DEVICE_CODE_PATH;
+        this.tokenUrl = baseUrl + TOKEN_PATH;
     }
 
     /**
@@ -90,7 +102,7 @@ public class CarDataAuthenticator {
         fields.put("code_challenge", Pkce.challenge(verifier));
         fields.put("code_challenge_method", "S256");
 
-        JsonObject json = post(DEVICE_CODE_URL, fields);
+        JsonObject json = post(deviceCodeUrl, fields);
         String deviceCode = string(json, "device_code");
         String userCode = string(json, "user_code");
         String verificationUri = string(json, "verification_uri");
@@ -120,7 +132,7 @@ public class CarDataAuthenticator {
         fields.put("device_code", authorization.deviceCode());
         fields.put("grant_type", GRANT_DEVICE_CODE);
         fields.put("code_verifier", authorization.codeVerifier());
-        return toTokenSet(post(TOKEN_URL, fields));
+        return toTokenSet(post(tokenUrl, fields));
     }
 
     private TokenSet toTokenSet(JsonObject json) throws IOException {
@@ -141,18 +153,34 @@ public class CarDataAuthenticator {
         Request request = httpClient.newRequest(url).method(HttpMethod.POST)
                 .header(HttpHeader.ACCEPT, "application/json").content(new FormContentProvider(fields))
                 .timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        if (logger.isTraceEnabled()) {
+            logger.trace("BMW identity request POST {} form: {}", url, redact(fields));
+        }
         ContentResponse response;
         try {
             response = request.send();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Interrupted while contacting BMW identity service", e);
-        } catch (TimeoutException | ExecutionException e) {
+        } catch (ExecutionException e) {
+            if (CarDataApi.isUnauthorizedResponse(e)) {
+                // the error in the body is lost, see CarDataApi.isUnauthorizedResponse
+                logger.trace("BMW identity response POST {} -> HTTP 401", url);
+                throw new CarDataAuthException(CarDataAuthException.INVALID_CLIENT,
+                        "BMW identity service answered HTTP 401");
+            }
+            throw new IOException("Failed to contact BMW identity service: " + e.getMessage(), e);
+        } catch (TimeoutException e) {
             throw new IOException("Failed to contact BMW identity service: " + e.getMessage(), e);
         }
 
-        JsonObject json = parse(response.getContentAsString());
+        String content = response.getContentAsString();
         int status = response.getStatus();
+        if (logger.isTraceEnabled()) {
+            logger.trace("BMW identity response POST {} -> HTTP {}, body: {}", url, status,
+                    LogRedaction.payload(content));
+        }
+        JsonObject json = parse(content);
         if (status == HttpStatus.OK_200) {
             return json;
         }
@@ -161,6 +189,17 @@ public class CarDataAuthenticator {
             throw new CarDataAuthException(error, string(json, "error_description"));
         }
         throw new IOException("BMW identity service returned HTTP " + status);
+    }
+
+    private static String redact(Fields fields) {
+        StringBuilder text = new StringBuilder();
+        for (Fields.Field field : fields) {
+            if (!text.isEmpty()) {
+                text.append('&');
+            }
+            text.append(field.getName()).append('=').append(LogRedaction.value(field.getName(), field.getValue()));
+        }
+        return text.toString();
     }
 
     private static JsonObject parse(String content) throws IOException {

@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
+import org.openhab.binding.mybmw.internal.LogRedaction;
 import org.openhab.binding.mybmw.internal.api.CarDataApi;
 import org.openhab.binding.mybmw.internal.api.CarDataApiException;
 import org.openhab.binding.mybmw.internal.api.RequestBudget;
@@ -65,7 +66,10 @@ import org.openhab.core.types.Command;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 
 /**
  * Handler of a CarData account, the bridge for its vehicles.
@@ -89,6 +93,7 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
     private static final Duration CATCH_UP_AFTER_OUTAGE = Duration.ofMinutes(5);
     private static final Duration CATCH_UP_MIN_SPACING = Duration.ofMinutes(30);
     private static final Duration MAPPINGS_MAX_AGE = Duration.ofHours(1);
+    private static final String BASIC_DATA_KEY = "/basicData/";
     private static final Duration SLOW_DOWN_INCREMENT = Duration.ofSeconds(5);
 
     private static final String CONTAINER_NAME = "openHAB";
@@ -136,11 +141,15 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
 
     private volatile AuthState authState = AuthState.STARTING;
     private volatile @Nullable String authDescription;
-    private volatile StreamState streamState = StreamState.DISCONNECTED;
+    // the device authorization the user has to confirm, shown on the authorization page
+    private volatile @Nullable DeviceAuthorization pendingAuthorization;
+    private volatile StreamState streamState = StreamState.CONNECTING;
     private volatile @Nullable String streamDetail;
     private volatile @Nullable Instant streamDownSince;
     private volatile @Nullable Instant lastCatchUp;
     private volatile boolean scopeHintLogged;
+    // Whether the first telematic refresh ran; vehicles added later get their own refresh
+    private volatile boolean telematicsStarted;
 
     // Delay before retrying a failed authorization step; reset when authorized
     private final RetryBackoff authBackoff = new RetryBackoff(RETRY_INITIAL_DELAY, RETRY_MAX_DELAY);
@@ -158,7 +167,8 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         this.config = config;
         int gen = generation.incrementAndGet();
         authState = AuthState.STARTING;
-        streamState = StreamState.DISCONNECTED;
+        streamState = StreamState.CONNECTING;
+        telematicsStarted = false;
         scopeHintLogged = false;
         authBackoff.reset();
 
@@ -187,8 +197,11 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         oAuthService.addAccessTokenRefreshListener(refreshListener);
         this.oAuthService = oAuthService;
 
-        RequestBudget budget = new RequestBudget(storage, key + "/budget", config.requestBudget, Clock.systemUTC());
-        api = new CarDataApi(httpClient, this::getAccessToken, budget);
+        // per client ID rather than per thing, as BMW counts per account, also when the account thing is recreated
+        storage.remove(key + "/budget");
+        RequestBudget budget = new RequestBudget(storage, "budget/" + clientId, config.requestBudget,
+                Clock.systemUTC());
+        api = new CarDataApi(httpClient, this::getAccessToken, () -> accessTokenRejected(gen), budget);
 
         updateStatus(ThingStatus.UNKNOWN);
         scheduler.execute(() -> startAuthorization(gen));
@@ -210,8 +223,28 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
             oAuthFactory.ungetOAuthService(getThing().getUID().getAsString());
         }
         tokens = null;
+        pendingAuthorization = null;
         mappings = List.of();
         mappingsFetched = null;
+    }
+
+    /**
+     * @return the device authorization the user has to confirm, {@code null} when none is pending
+     */
+    public @Nullable DeviceAuthorization getPendingAuthorization() {
+        @Nullable
+        DeviceAuthorization authorization = pendingAuthorization;
+        if (authorization == null || authState != AuthState.AUTHORIZING || authorization.isExpired(Instant.now())) {
+            return null;
+        }
+        return authorization;
+    }
+
+    /**
+     * @return whether the account is authorized at BMW
+     */
+    public boolean isAuthorized() {
+        return authState == AuthState.AUTHORIZED;
     }
 
     @Override
@@ -219,6 +252,11 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         String key = getThing().getUID().getAsString();
         deleteAuthorization();
         storage.remove(key + "/container");
+        for (String storageKey : List.copyOf(storage.getKeys())) {
+            if (storageKey.startsWith(key + BASIC_DATA_KEY)) {
+                storage.remove(storageKey);
+            }
+        }
         // the request budget is kept: BMW keeps counting the requests for this account
         super.handleRemoval();
     }
@@ -238,8 +276,16 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         if (childHandler instanceof VehicleHandler vehicle && !vehicle.getVin().isEmpty()) {
             vehicles.put(vehicle.getVin(), vehicle);
             int gen = generation.get();
-            if (authState == AuthState.AUTHORIZED && vehicle.needsBasicData()) {
-                scheduler.execute(() -> fetchBasicData(gen, List.of(vehicle)));
+            if (authState == AuthState.AUTHORIZED) {
+                scheduler.execute(() -> {
+                    if (vehicle.needsBasicData()) {
+                        fetchBasicData(gen, List.of(vehicle));
+                    }
+                    if (telematicsStarted) {
+                        // added after the first refresh, which did not include it
+                        refreshTelematics(gen, "vehicle added", List.of(vehicle));
+                    }
+                });
             }
         }
     }
@@ -251,6 +297,10 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
 
     public void setDiscoveryService(@Nullable VehicleDiscoveryService discoveryService) {
         this.discoveryService = discoveryService;
+        if (discoveryService != null && mappingsFetched != null) {
+            // fetched before the discovery service was set up
+            discoveryService.vehiclesFetched(mappings);
+        }
     }
 
     /**
@@ -264,7 +314,7 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
             try {
                 return refreshMappings();
             } catch (IOException | CarDataApiException e) {
-                logger.debug("Could not fetch vehicle mappings: {}", e.getMessage());
+                logger.debug("Could not fetch vehicle mappings: {}", LogRedaction.vins(e.getMessage()));
             } catch (CarDataAuthException e) {
                 handleAuthException(generation.get(), e);
             }
@@ -312,8 +362,8 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         }
         try {
             DeviceAuthorization authorization = authenticator.startDeviceAuthorization();
-            setAuthState(gen, AuthState.AUTHORIZING, "@text/offline.authorize [\"" + authorization.userLink() + "\", \""
-                    + authorization.userCode() + "\"]");
+            pendingAuthorization = authorization;
+            setAuthState(gen, AuthState.AUTHORIZING, "@text/offline.authorize");
             scheduleAuthJob(gen, authorization.interval(),
                     () -> pollDeviceFlow(gen, authorization, authorization.interval()));
         } catch (IOException e) {
@@ -384,6 +434,11 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         } catch (OAuthException e) {
             handleAuthException(gen, CarDataTokens.toAuthException(e));
         } catch (IOException e) {
+            CarDataAuthException unauthorized = CarDataTokens.fromUnauthorizedResponse(e);
+            if (unauthorized != null) {
+                handleAuthException(gen, unauthorized);
+                return;
+            }
             logger.debug("Token refresh failed: {}", e.getMessage());
             TokenSet current = tokens;
             if (current != null && current.isValid(Instant.now(), Duration.ZERO)) {
@@ -432,6 +487,17 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
     }
 
     /**
+     * Called by the REST client when BMW rejects the access token before it expired, e.g. after the authorization was
+     * revoked in the portal. A refresh either yields a working token or leads to a new authorization.
+     */
+    private void accessTokenRejected(int gen) {
+        if (isCurrent(gen) && authState == AuthState.AUTHORIZED) {
+            logger.debug("CarData rejected the access token, refreshing it");
+            scheduleAuthJob(gen, Duration.ZERO, () -> refreshTokens(gen));
+        }
+    }
+
+    /**
      * Supplies the REST client with a valid access token. Core refreshes it first when it has expired.
      */
     private String getAccessToken() throws IOException, CarDataAuthException {
@@ -450,6 +516,13 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
             throw CarDataTokens.toAuthException(e);
         } catch (OAuthException e) {
             throw CarDataTokens.toAuthException(e);
+        } catch (IOException e) {
+            // core's refresh of an expired token failed
+            CarDataAuthException unauthorized = CarDataTokens.fromUnauthorizedResponse(e);
+            if (unauthorized != null) {
+                throw unauthorized;
+            }
+            throw e;
         }
     }
 
@@ -530,6 +603,9 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         }
         authState = state;
         authDescription = description;
+        if (state != AuthState.AUTHORIZING) {
+            pendingAuthorization = null;
+        }
         updateAccountStatus();
     }
 
@@ -557,7 +633,7 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         if (stream != null) {
             stream.stop();
         }
-        streamState = StreamState.DISCONNECTED;
+        streamState = StreamState.CONNECTING;
     }
 
     @Override
@@ -566,7 +642,7 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         if (vehicle != null) {
             vehicle.onTelematicData(values);
         } else {
-            logger.trace("Stream data for vehicle {} without a thing", vin);
+            logger.trace("Stream data for vehicle {} without a thing", LogRedaction.vin(vin));
         }
     }
 
@@ -605,6 +681,7 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
                 case CONFIGURATION_ERROR -> updateStatus(ThingStatusDetail.CONFIGURATION_ERROR, authDescription);
                 case AUTHORIZED -> {
                     switch (streamState) {
+                        case CONNECTING -> updateStatus(ThingStatus.UNKNOWN, "@text/unknown.broker-connecting");
                         case DISCONNECTED -> {
                             String detail = streamDetail;
                             updateStatus(ThingStatusDetail.COMMUNICATION_ERROR,
@@ -642,7 +719,9 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
     }
 
     /**
-     * Fetches the vehicle list for discovery and the basic data of vehicles that do not have it yet.
+     * Fetches the vehicle list for discovery when the account has no vehicles yet, and the basic data of vehicles that
+     * do not have it yet. An account with vehicles does not spend a request on the vehicle list at every start; a scan
+     * fetches it when the user looks for another vehicle.
      */
     private void bootstrap(int gen) {
         if (!isCurrent(gen)) {
@@ -650,9 +729,11 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         }
         synchronized (restLock) {
             try {
-                refreshMappings();
+                if (getThing().getThings().isEmpty()) {
+                    refreshMappings();
+                }
             } catch (IOException | CarDataApiException e) {
-                logger.debug("Could not fetch vehicle mappings: {}", e.getMessage());
+                logger.debug("Could not fetch vehicle mappings: {}", LogRedaction.vins(e.getMessage()));
             } catch (CarDataAuthException e) {
                 handleAuthException(gen, e);
                 return;
@@ -676,6 +757,7 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         List<VehicleMapping> fresh = api.getMappings();
         mappings = fresh;
         mappingsFetched = Instant.now();
+        cacheBasicData(api, fresh);
         for (VehicleMapping mapping : fresh) {
             String vin = mapping.vin;
             String mappingType = mapping.mappingType;
@@ -691,6 +773,68 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
         return fresh;
     }
 
+    /**
+     * Fetches the basic data of the primary vehicles that are not in the cache yet, so discovery can leave out
+     * vehicles that cannot send data and label the others with their model. A vehicle thing created later reuses the
+     * cached data. Must be called holding the REST lock.
+     */
+    private void cacheBasicData(CarDataApi api, List<VehicleMapping> mappings) throws CarDataAuthException {
+        for (VehicleMapping mapping : mappings) {
+            String vin = mapping.vin;
+            if (vin == null || vin.isBlank() || !VehicleMapping.PRIMARY.equals(mapping.mappingType)
+                    || storage.containsKey(basicDataKey(vin))) {
+                continue;
+            }
+            try {
+                basicData(api, vin);
+            } catch (IOException | CarDataApiException e) {
+                logger.debug("Could not fetch basic data of vehicle {}: {}", LogRedaction.vin(vin),
+                        LogRedaction.vins(e.getMessage()));
+                if (e instanceof CarDataApiException apiException && apiException.isRateLimited()) {
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * @param vin vehicle identification number
+     * @return the vehicle's basic data if it was fetched before, {@code null} otherwise
+     */
+    public @Nullable JsonObject getCachedBasicData(String vin) {
+        String cached = storage.get(basicDataKey(vin));
+        if (cached != null) {
+            try {
+                JsonElement json = JsonParser.parseString(cached);
+                if (json.isJsonObject()) {
+                    return json.getAsJsonObject();
+                }
+            } catch (JsonParseException e) {
+                // fetched again below
+            }
+            storage.remove(basicDataKey(vin));
+        }
+        return null;
+    }
+
+    /**
+     * Returns the vehicle's basic data from the cache, or fetches and caches it. Must be called holding the REST lock.
+     */
+    private JsonObject basicData(CarDataApi api, String vin)
+            throws IOException, CarDataAuthException, CarDataApiException {
+        JsonObject cached = getCachedBasicData(vin);
+        if (cached != null) {
+            return cached;
+        }
+        JsonObject fetched = api.getBasicData(vin);
+        storage.put(basicDataKey(vin), fetched.toString());
+        return fetched;
+    }
+
+    private String basicDataKey(String vin) {
+        return getThing().getUID().getAsString() + BASIC_DATA_KEY + vin;
+    }
+
     private void fetchBasicData(int gen, List<VehicleHandler> targets) {
         CarDataApi api = this.api;
         if (!isCurrent(gen) || api == null || targets.isEmpty()) {
@@ -702,10 +846,10 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
                     continue;
                 }
                 try {
-                    JsonObject basicData = api.getBasicData(vehicle.getVin());
-                    vehicle.updateBasicData(basicData);
+                    vehicle.updateBasicData(basicData(api, vehicle.getVin()));
                 } catch (IOException | CarDataApiException e) {
-                    logger.debug("Could not fetch basic data of vehicle {}: {}", vehicle.getVin(), e.getMessage());
+                    logger.debug("Could not fetch basic data of vehicle {}: {}", LogRedaction.vin(vehicle.getVin()),
+                            LogRedaction.vins(e.getMessage()));
                     if (e instanceof CarDataApiException apiException && apiException.isRateLimited()) {
                         return;
                     }
@@ -722,14 +866,26 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
      */
     private void refreshTelematics(int gen, String reason) {
         CarDataApi api = this.api;
-        if (!isCurrent(gen) || api == null || authState != AuthState.AUTHORIZED || vehicles.isEmpty()) {
+        if (!isCurrent(gen) || api == null || authState != AuthState.AUTHORIZED) {
+            return;
+        }
+        telematicsStarted = true;
+        refreshTelematics(gen, reason, new ArrayList<>(vehicles.values()));
+    }
+
+    /**
+     * Reads the current values of all mapped descriptors for the given vehicles, one request per vehicle.
+     */
+    private void refreshTelematics(int gen, String reason, List<VehicleHandler> targets) {
+        CarDataApi api = this.api;
+        if (!isCurrent(gen) || api == null || authState != AuthState.AUTHORIZED || targets.isEmpty()) {
             return;
         }
         synchronized (restLock) {
             logger.debug("Refreshing telematic data ({})", reason);
             try {
                 String containerId = ensureContainer(api);
-                for (VehicleHandler vehicle : new ArrayList<>(vehicles.values())) {
+                for (VehicleHandler vehicle : targets) {
                     try {
                         List<TelematicValue> values = api.getTelematicData(vehicle.getVin(), containerId);
                         vehicle.onTelematicData(values);
@@ -742,7 +898,8 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
                         if (e.isRateLimited()) {
                             throw e;
                         }
-                        logger.debug("Could not refresh vehicle {}: {}", vehicle.getVin(), e.getMessage());
+                        logger.debug("Could not refresh vehicle {}: {}", LogRedaction.vin(vehicle.getVin()),
+                                LogRedaction.vins(e.getMessage()));
                     }
                 }
             } catch (CarDataApiException e) {
@@ -750,10 +907,10 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
                     logger.warn("Cannot create a CarData container, the account already has the maximum of 10. "
                             + "Delete an unused container in the CarData portal.");
                 } else {
-                    logger.debug("Telematic refresh stopped: {}", e.getMessage());
+                    logger.debug("Telematic refresh stopped: {}", LogRedaction.vins(e.getMessage()));
                 }
             } catch (IOException e) {
-                logger.debug("Telematic refresh failed: {}", e.getMessage());
+                logger.debug("Telematic refresh failed: {}", LogRedaction.vins(e.getMessage()));
             } catch (CarDataAuthException e) {
                 handleAuthException(gen, e);
             }
@@ -762,7 +919,8 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
 
     /**
      * Returns the id of the binding's container, reusing one that exists for the current descriptor set, so restarts
-     * or a lost storage do not pile up containers against BMW's limit of 10. Must be called holding the REST lock.
+     * or a lost storage do not pile up containers against BMW's limit of 10. Containers of this binding for another
+     * descriptor set, left by an earlier version, are deleted first. Must be called holding the REST lock.
      */
     private String ensureContainer(CarDataApi api) throws IOException, CarDataAuthException, CarDataApiException {
         List<String> descriptors = TelematicChannel.descriptors();
@@ -772,22 +930,67 @@ public class AccountHandler extends BaseBridgeHandler implements StreamListener 
             return stored.substring(0, stored.length() - signature.length() - 1);
         }
         String purpose = CONTAINER_PURPOSE + signature;
-        for (Container container : api.listContainers()) {
-            String id = container.containerId;
-            if (id != null && Container.STATE_ACTIVE.equals(container.state) && CONTAINER_NAME.equals(container.name)
-                    && purpose.equals(container.purpose)) {
-                storage.put(containerKey(), id + "|" + signature);
-                return id;
-            }
-        }
-        Container created = api.createContainer(new Container.CreateRequest(CONTAINER_NAME, purpose, descriptors));
-        String id = created.containerId;
+        List<String> obsolete = new ArrayList<>();
+        String id = selectContainer(api.listContainers(), purpose, obsolete);
+        // before creating, as BMW refuses an 11th container
+        deleteContainers(api, obsolete);
         if (id == null) {
-            throw new IOException("Container creation returned no id");
+            Container created = api.createContainer(new Container.CreateRequest(CONTAINER_NAME, purpose, descriptors));
+            id = created.containerId;
+            if (id == null) {
+                throw new IOException("Container creation returned no id");
+            }
+            logger.debug("Created CarData container {} with {} descriptors", id, descriptors.size());
         }
-        logger.debug("Created CarData container {} with {} descriptors", id, descriptors.size());
         storage.put(containerKey(), id + "|" + signature);
         return id;
+    }
+
+    /**
+     * Picks the container to use from the account's containers. Containers of other applications are left alone.
+     *
+     * @param containers the containers of the account
+     * @param purpose the purpose of the container for the current descriptor set
+     * @param obsolete receives the ids of this binding's containers that are not needed: those for another
+     *            descriptor set, inactive ones and duplicates
+     * @return the id of an active container for the current descriptor set, {@code null} when there is none
+     */
+    static @Nullable String selectContainer(List<Container> containers, String purpose, List<String> obsolete) {
+        String selected = null;
+        for (Container container : containers) {
+            String id = container.containerId;
+            String containerPurpose = container.purpose;
+            if (id == null || !CONTAINER_NAME.equals(container.name) || containerPurpose == null
+                    || !containerPurpose.startsWith(CONTAINER_PURPOSE)
+                    || Container.STATE_DELETED.equals(container.state)) {
+                continue;
+            }
+            if (selected == null && purpose.equals(containerPurpose)
+                    && Container.STATE_ACTIVE.equals(container.state)) {
+                selected = id;
+            } else {
+                obsolete.add(id);
+            }
+        }
+        return selected;
+    }
+
+    /**
+     * Deletes containers, as far as the request budget allows; a container that is not deleted now is deleted the next
+     * time the binding needs a new container. Must be called holding the REST lock.
+     */
+    private void deleteContainers(CarDataApi api, List<String> ids) throws CarDataAuthException {
+        for (String id : ids) {
+            try {
+                api.deleteContainer(id);
+                logger.debug("Deleted obsolete CarData container {}", id);
+            } catch (IOException | CarDataApiException e) {
+                logger.debug("Could not delete obsolete CarData container {}: {}", id, e.getMessage());
+                if (e instanceof CarDataApiException apiException && apiException.isRateLimited()) {
+                    return;
+                }
+            }
+        }
     }
 
     private String containerKey() {

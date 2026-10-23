@@ -30,6 +30,7 @@ public class CarDataAuthException extends Exception {
     public static final String EXPIRED_TOKEN = "expired_token";
     public static final String ACCESS_DENIED = "access_denied";
     public static final String INVALID_GRANT = "invalid_grant";
+    public static final String INVALID_CLIENT = "invalid_client";
 
     private final String error;
 
@@ -57,6 +58,6 @@ public class CarDataAuthException extends Exception {
      */
     public boolean requiresReauthorization() {
         return INVALID_GRANT.equals(error) || EXPIRED_TOKEN.equals(error) || ACCESS_DENIED.equals(error)
-                || "unauthorized_client".equals(error) || "invalid_client".equals(error);
+                || "unauthorized_client".equals(error) || INVALID_CLIENT.equals(error);
     }
 }

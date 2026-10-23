@@ -44,6 +44,15 @@ public class MyBMWBindingConstants {
     public static final String PROPERTY_DRIVE_TRAIN = "driveTrain";
     public static final String PROPERTY_CONSTRUCTION_DATE = "constructionDate";
     public static final String PROPERTY_COUNTRY = "countryCode";
+    public static final String PROPERTY_COLOR = "color";
+    public static final String PROPERTY_CHARGING_MODES = "chargingModes";
+    public static final String PROPERTY_HAS_NAVIGATION = "hasNavigation";
+    public static final String PROPERTY_HAS_SUNROOF = "hasSunroof";
+    public static final String PROPERTY_MODEL_KEY = "modelKey";
+    public static final String PROPERTY_DEVELOPMENT_SERIES = "developmentSeries";
+    public static final String PROPERTY_HEAD_UNIT = "headUnit";
+    public static final String PROPERTY_SIM_STATUS = "simStatus";
+    public static final String PROPERTY_TELEMATICS_CAPABLE = "telematicsCapable";
     public static final String PROPERTY_MAPPING_TYPE = "mappingType";
 
     // Channel groups and channels that are not driven by a single telematic descriptor

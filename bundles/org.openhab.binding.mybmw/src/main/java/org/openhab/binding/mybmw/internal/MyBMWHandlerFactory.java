@@ -14,6 +14,9 @@ package org.openhab.binding.mybmw.internal;
 
 import static org.openhab.binding.mybmw.internal.MyBMWBindingConstants.*;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
@@ -39,12 +42,13 @@ import org.osgi.service.component.annotations.Reference;
  * @author Mark Herwege - Initial contribution
  */
 @NonNullByDefault
-@Component(configurationPid = "binding.mybmw", service = ThingHandlerFactory.class)
+@Component(configurationPid = "binding.mybmw", service = { ThingHandlerFactory.class, MyBMWHandlerFactory.class })
 public class MyBMWHandlerFactory extends BaseThingHandlerFactory {
 
     private final HttpClient httpClient;
     private final OAuthFactory oAuthFactory;
     private final Storage<String> storage;
+    private final Set<AccountHandler> accountHandlers = ConcurrentHashMap.newKeySet();
 
     @Activate
     public MyBMWHandlerFactory(@Reference HttpClientFactory httpClientFactory, @Reference OAuthFactory oAuthFactory,
@@ -63,11 +67,27 @@ public class MyBMWHandlerFactory extends BaseThingHandlerFactory {
     protected @Nullable ThingHandler createHandler(Thing thing) {
         ThingTypeUID thingTypeUID = thing.getThingTypeUID();
         if (THING_TYPE_ACCOUNT.equals(thingTypeUID) && thing instanceof Bridge bridge) {
-            return new AccountHandler(bridge, httpClient, oAuthFactory, storage);
+            AccountHandler handler = new AccountHandler(bridge, httpClient, oAuthFactory, storage);
+            accountHandlers.add(handler);
+            return handler;
         }
         if (THING_TYPE_VEHICLE.equals(thingTypeUID)) {
             return new VehicleHandler(thing);
         }
         return null;
+    }
+
+    @Override
+    protected void removeHandler(ThingHandler thingHandler) {
+        if (thingHandler instanceof AccountHandler accountHandler) {
+            accountHandlers.remove(accountHandler);
+        }
+    }
+
+    /**
+     * @return the handlers of the account things, for the authorization page
+     */
+    public Set<AccountHandler> getAccountHandlers() {
+        return Set.copyOf(accountHandlers);
     }
 }

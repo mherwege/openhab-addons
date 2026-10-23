@@ -24,6 +24,7 @@ import org.eclipse.jdt.annotation.Nullable;
 public class Container {
 
     public static final String STATE_ACTIVE = "ACTIVE";
+    public static final String STATE_DELETED = "DELETED";
 
     public @Nullable String containerId;
     public @Nullable String name;

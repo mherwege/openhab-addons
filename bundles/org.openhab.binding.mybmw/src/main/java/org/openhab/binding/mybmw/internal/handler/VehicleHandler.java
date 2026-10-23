@@ -17,21 +17,27 @@ import static org.openhab.binding.mybmw.internal.MyBMWBindingConstants.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.binding.mybmw.internal.LogRedaction;
 import org.openhab.binding.mybmw.internal.data.TelematicChannel;
+import org.openhab.binding.mybmw.internal.data.TelematicChannel.Drive;
 import org.openhab.binding.mybmw.internal.data.TelematicStateConverter;
 import org.openhab.binding.mybmw.internal.data.TelematicValue;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.PointType;
 import org.openhab.core.thing.Bridge;
+import org.openhab.core.thing.Channel;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
@@ -57,23 +63,35 @@ import com.google.gson.JsonObject;
 public class VehicleHandler extends BaseThingHandler {
 
     /** Basic data members published as thing properties */
-    private static final Map<String, String> BASIC_DATA_PROPERTIES = Map.of( //
-            "brand", PROPERTY_BRAND, //
-            "modelName", PROPERTY_MODEL_NAME, //
-            "series", PROPERTY_SERIES, //
-            "bodyType", PROPERTY_BODY_TYPE, //
-            "propulsionType", PROPERTY_PROPULSION_TYPE, //
-            "driveTrain", PROPERTY_DRIVE_TRAIN, //
-            "constructionDate", PROPERTY_CONSTRUCTION_DATE, //
-            "countryCodeISO", PROPERTY_COUNTRY);
+    private static final Map<String, String> BASIC_DATA_PROPERTIES = Map.ofEntries( //
+            Map.entry("brand", PROPERTY_BRAND), //
+            Map.entry("modelName", PROPERTY_MODEL_NAME), //
+            Map.entry("series", PROPERTY_SERIES), //
+            Map.entry("bodyType", PROPERTY_BODY_TYPE), //
+            Map.entry("propulsionType", PROPERTY_PROPULSION_TYPE), //
+            Map.entry("driveTrain", PROPERTY_DRIVE_TRAIN), //
+            Map.entry("constructionDate", PROPERTY_CONSTRUCTION_DATE), //
+            Map.entry("countryCode", PROPERTY_COUNTRY), //
+            Map.entry("colourDescription", PROPERTY_COLOR), //
+            Map.entry("chargingModes", PROPERTY_CHARGING_MODES), //
+            Map.entry("hasNavi", PROPERTY_HAS_NAVIGATION), //
+            Map.entry("hasSunRoof", PROPERTY_HAS_SUNROOF), //
+            Map.entry("modelKey", PROPERTY_MODEL_KEY), //
+            Map.entry("seriesDevt", PROPERTY_DEVELOPMENT_SERIES), //
+            Map.entry("headUnit", PROPERTY_HEAD_UNIT), //
+            Map.entry("simStatus", PROPERTY_SIM_STATUS), //
+            Map.entry("isTelematicsCapable", PROPERTY_TELEMATICS_CAPABLE));
 
     private final Logger logger = LoggerFactory.getLogger(VehicleHandler.class);
+
+    private static final String SIM_ACTIVE = "ACTIVE";
 
     private String vin = "";
 
     /** Guards the fields below; separate from the handler's own monitor, which the framework uses */
     private final Object dataLock = new Object();
     private final Map<String, Instant> descriptorTimestamps = new HashMap<>();
+    private final Map<String, JsonElement> descriptorValues = new HashMap<>();
     private @Nullable BigDecimal latitude;
     private @Nullable BigDecimal longitude;
     private @Nullable BigDecimal altitude;
@@ -94,6 +112,7 @@ public class VehicleHandler extends BaseThingHandler {
             return;
         }
         vin = configuredVin;
+        removeIrrelevantChannels();
         updateStatusFromBridge(getBridgeStatus());
     }
 
@@ -101,6 +120,7 @@ public class VehicleHandler extends BaseThingHandler {
     public void dispose() {
         synchronized (dataLock) {
             descriptorTimestamps.clear();
+            descriptorValues.clear();
             latitude = null;
             longitude = null;
             altitude = null;
@@ -134,10 +154,20 @@ public class VehicleHandler extends BaseThingHandler {
     }
 
     /**
-     * @return whether the thing has no properties from the basic data endpoint yet
+     * @param basicData the vehicle's basic data
+     * @return whether the vehicle can send data to CarData; {@code true} when BMW does not say
+     */
+    public static boolean isTelematicsCapable(JsonObject basicData) {
+        JsonElement capable = basicData.get("isTelematicsCapable");
+        return capable == null || !capable.isJsonPrimitive() || !"false".equalsIgnoreCase(capable.getAsString());
+    }
+
+    /**
+     * @return whether the thing has no properties from the basic data endpoint yet; things that were set up before the
+     *         sunroof property was added take the basic data once more, which the account serves from its cache
      */
     public boolean needsBasicData() {
-        return !getThing().getProperties().containsKey(PROPERTY_MODEL_NAME);
+        return !getThing().getProperties().containsKey(PROPERTY_HAS_SUNROOF);
     }
 
     /**
@@ -148,14 +178,113 @@ public class VehicleHandler extends BaseThingHandler {
     public void updateBasicData(JsonObject basicData) {
         Map<String, String> properties = editProperties();
         BASIC_DATA_PROPERTIES.forEach((member, property) -> {
-            JsonElement element = basicData.get(member);
-            if (element != null && element.isJsonPrimitive() && !element.getAsString().isBlank()) {
-                properties.put(property, element.getAsString());
+            String value = propertyValue(basicData.get(member));
+            if (value != null) {
+                properties.put(property, value);
             }
         });
-        // marks the basic data as fetched, even when BMW leaves the model name out
-        properties.putIfAbsent(PROPERTY_MODEL_NAME, "");
+        // marks the basic data as fetched, even when BMW leaves the sunroof out; an empty value means unknown
+        properties.putIfAbsent(PROPERTY_HAS_SUNROOF, "");
         updateProperties(properties);
+        if (!vin.isEmpty()) {
+            removeIrrelevantChannels();
+            updateStatusFromBridge(getBridgeStatus());
+        }
+    }
+
+    /**
+     * Removes the channels of equipment the basic data says the vehicle does not have: the sunroof, and the location,
+     * which the vehicle reports through its navigation system. Channels are only removed when BMW explicitly reports
+     * the equipment is missing; recreate the thing to get them back.
+     */
+    private void removeIrrelevantChannels() {
+        List<Channel> channels = irrelevantChannelIds(getThing().getProperties()).stream()
+                .map(id -> getThing().getChannel(id)).filter(Objects::nonNull).map(Objects::requireNonNull).toList();
+        if (!channels.isEmpty()) {
+            logger.debug("Vehicle {}: removing {} channels for equipment it does not have", LogRedaction.vin(vin),
+                    channels.size());
+            updateThing(editThing().withoutChannels(channels).build());
+        }
+    }
+
+    /**
+     * @param properties the thing properties
+     * @return the ids of the channels that do not apply to the vehicle
+     */
+    static List<String> irrelevantChannelIds(Map<String, String> properties) {
+        List<String> ids = new ArrayList<>();
+        if ("false".equalsIgnoreCase(properties.get(PROPERTY_HAS_SUNROOF))) {
+            ids.add(TelematicChannel.SUNROOF.getChannelId());
+            ids.add(Objects.requireNonNull(TelematicChannel.SUNROOF.getDetailChannelId()));
+        }
+        if ("false".equalsIgnoreCase(properties.get(PROPERTY_HAS_NAVIGATION))) {
+            ids.add(GROUP_LOCATION + "#" + CHANNEL_POSITION);
+            ids.add(TelematicChannel.HEADING.getChannelId());
+        }
+        Set<Drive> drives = drives(properties);
+        for (TelematicChannel mapping : TelematicChannel.values()) {
+            if (mapping.getDrive() != Drive.ANY && !drives.contains(mapping.getDrive())) {
+                ids.add(mapping.getChannelId());
+                String detailChannelId = mapping.getDetailChannelId();
+                if (detailChannelId != null) {
+                    ids.add(detailChannelId);
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Derives the drives of the vehicle from its basic data: the drive train, or the propulsion type when the drive
+     * train is not known. Only {@code BEV} and {@code EL} have been seen; other values are matched by the catalogue's
+     * abbreviations, and a value that is not recognized keeps all channels.
+     *
+     * @param properties the thing properties
+     * @return the drives the vehicle has
+     */
+    static Set<Drive> drives(Map<String, String> properties) {
+        Set<Drive> drives = drives(properties.get(PROPERTY_DRIVE_TRAIN));
+        return drives != null ? drives
+                : Objects.requireNonNullElse(drives(properties.get(PROPERTY_PROPULSION_TYPE)),
+                        EnumSet.of(Drive.ELECTRIC, Drive.COMBUSTION));
+    }
+
+    private static @Nullable Set<Drive> drives(@Nullable String type) {
+        if (type == null || type.isBlank()) {
+            return null;
+        }
+        String upperCase = type.strip().toUpperCase(Locale.ROOT);
+        if (upperCase.contains("PHEV") || upperCase.contains("PLUGIN") || upperCase.contains("PLUG_IN")) {
+            return EnumSet.of(Drive.ELECTRIC, Drive.COMBUSTION);
+        }
+        if ("BEV".equals(upperCase) || "EL".equals(upperCase) || "ELECTRIC".equals(upperCase)) {
+            return EnumSet.of(Drive.ELECTRIC);
+        }
+        if ("CE".equals(upperCase) || "ICE".equals(upperCase) || "COMBUSTION".equals(upperCase)
+                || upperCase.contains("MHEV") || upperCase.contains("MILD") || "HEV".equals(upperCase)
+                || "CONV".equals(upperCase) || "CONVENTIONAL".equals(upperCase)) {
+            return EnumSet.of(Drive.COMBUSTION);
+        }
+        return null;
+    }
+
+    /**
+     * @return the text of a basic data value, a list joined with commas, or {@code null} when it is empty
+     */
+    public static @Nullable String propertyValue(@Nullable JsonElement element) {
+        String value = null;
+        if (element != null && element.isJsonPrimitive()) {
+            value = element.getAsString();
+        } else if (element != null && element.isJsonArray()) {
+            List<String> items = new ArrayList<>();
+            for (JsonElement item : element.getAsJsonArray()) {
+                if (item.isJsonPrimitive()) {
+                    items.add(item.getAsString());
+                }
+            }
+            value = String.join(", ", items);
+        }
+        return value == null || value.isBlank() ? null : value;
     }
 
     /**
@@ -183,7 +312,7 @@ public class VehicleHandler extends BaseThingHandler {
             for (TelematicValue value : values) {
                 TelematicChannel mapping = TelematicChannel.fromDescriptor(value.descriptor());
                 if (mapping == null) {
-                    logger.trace("Vehicle {}: no channel for descriptor {}", vin, value.descriptor());
+                    logger.trace("Vehicle {}: no channel for descriptor {}", LogRedaction.vin(vin), value.descriptor());
                     continue;
                 }
                 if (!isNewer(value)) {
@@ -238,6 +367,8 @@ public class VehicleHandler extends BaseThingHandler {
 
     /**
      * Must be called holding the data lock. Records the value's timestamp when it is not older than the last one.
+     * A value identical to the last one, with the same timestamp, is a copy and is not applied again: the stream
+     * delivers many values twice.
      */
     private boolean isNewer(TelematicValue value) {
         Instant timestamp = value.timestamp();
@@ -247,11 +378,15 @@ public class VehicleHandler extends BaseThingHandler {
         }
         Instant previous = descriptorTimestamps.get(value.descriptor());
         if (previous != null && timestamp.isBefore(previous)) {
-            logger.trace("Vehicle {}: ignoring {} from {}, already have {}", vin, value.descriptor(), timestamp,
-                    previous);
+            logger.trace("Vehicle {}: ignoring {} from {}, already have {}", LogRedaction.vin(vin), value.descriptor(),
+                    timestamp, previous);
+            return false;
+        }
+        if (timestamp.equals(previous) && value.value().equals(descriptorValues.get(value.descriptor()))) {
             return false;
         }
         descriptorTimestamps.put(value.descriptor(), timestamp);
+        descriptorValues.put(value.descriptor(), value.value());
         return true;
     }
 
@@ -280,10 +415,20 @@ public class VehicleHandler extends BaseThingHandler {
     }
 
     private void updateStatusFromBridge(@Nullable ThingStatus bridgeStatus) {
-        if (bridgeStatus == null) {
+        Map<String, String> properties = getThing().getProperties();
+        String simStatus = properties.get(PROPERTY_SIM_STATUS);
+        if ("false".equalsIgnoreCase(properties.get(PROPERTY_TELEMATICS_CAPABLE))) {
+            // basic data from BMW, so it is known regardless of the bridge
+            updateStatus(ThingStatusDetail.CONFIGURATION_ERROR, "@text/offline.not-telematics-capable");
+        } else if (bridgeStatus == null) {
             updateStatus(ThingStatusDetail.CONFIGURATION_ERROR, "@text/offline.no-bridge");
         } else if (bridgeStatus == ThingStatus.ONLINE) {
-            updateStatus(ThingStatus.ONLINE);
+            if (simStatus != null && !simStatus.isBlank() && !SIM_ACTIVE.equalsIgnoreCase(simStatus)) {
+                updateStatus(ThingStatus.ONLINE,
+                        "@text/online.sim-not-active [\"" + simStatus.replace("\"", "'") + "\"]");
+            } else {
+                updateStatus(ThingStatus.ONLINE);
+            }
         } else {
             updateStatus(ThingStatusDetail.BRIDGE_OFFLINE);
         }

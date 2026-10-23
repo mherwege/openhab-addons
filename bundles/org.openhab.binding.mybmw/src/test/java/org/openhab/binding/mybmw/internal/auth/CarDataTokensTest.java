@@ -13,12 +13,17 @@
 package org.openhab.binding.mybmw.internal.auth;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jetty.client.HttpResponseException;
+import org.eclipse.jetty.client.api.Response;
 import org.junit.jupiter.api.Test;
 import org.openhab.core.auth.client.oauth2.AccessTokenResponse;
 import org.openhab.core.auth.client.oauth2.OAuthException;
@@ -105,5 +110,21 @@ class CarDataTokensTest {
         assertFalse(TOKENS.isValid(expiry.minus(Duration.ofMinutes(4)), Duration.ofMinutes(5)));
         assertTrue(TOKENS.hasScope("cardata:api:read"));
         assertFalse(TOKENS.hasScope("cardata:api"));
+    }
+
+    @Test
+    void unauthorizedTokenResponseRequiresReauthorization() {
+        Response response = mock(Response.class);
+        when(response.getStatus()).thenReturn(401);
+        // as core's OAuth client wraps the exception of Jetty's authentication handler
+        IOException e = new IOException("Exception in oauth communication, grant type refresh_token",
+                new ExecutionException(new HttpResponseException("HTTP protocol violation", response)));
+        CarDataAuthException authException = CarDataTokens.fromUnauthorizedResponse(e);
+        assertNotNull(authException);
+        assertTrue(authException.requiresReauthorization());
+
+        when(response.getStatus()).thenReturn(500);
+        assertNull(CarDataTokens.fromUnauthorizedResponse(e));
+        assertNull(CarDataTokens.fromUnauthorizedResponse(new IOException("timeout")));
     }
 }

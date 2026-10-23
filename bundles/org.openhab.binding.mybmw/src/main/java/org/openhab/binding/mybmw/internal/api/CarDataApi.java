@@ -27,13 +27,14 @@ import java.util.concurrent.TimeoutException;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpResponseException;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.util.StringContentProvider;
-import org.eclipse.jetty.http.HttpField;
-import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.http.HttpStatus;
+import org.openhab.binding.mybmw.internal.LogRedaction;
 import org.openhab.binding.mybmw.internal.api.dto.Container;
 import org.openhab.binding.mybmw.internal.api.dto.VehicleMapping;
 import org.openhab.binding.mybmw.internal.auth.CarDataAuthException;
@@ -69,18 +70,36 @@ public class CarDataApi {
     private static final String BASE_URL = "https://api-cardata.bmwgroup.com";
     private static final String API_VERSION = "v1";
     private static final long TIMEOUT_SECONDS = 30;
+    private static final String REQUEST_ID_HEADER = "x-amzn-RequestId";
 
     private final Logger logger = LoggerFactory.getLogger(CarDataApi.class);
     private final Gson gson = new Gson();
 
     private final HttpClient httpClient;
     private final AccessTokenProvider tokenProvider;
+    private final Runnable tokenRejected;
     private final RequestBudget budget;
+    private final String baseUrl;
 
-    public CarDataApi(HttpClient httpClient, AccessTokenProvider tokenProvider, RequestBudget budget) {
+    /**
+     * @param httpClient the HTTP client
+     * @param tokenProvider supplies the access token
+     * @param tokenRejected called when BMW rejects the access token, so it can be refreshed before it expires
+     * @param budget the account's request budget
+     */
+    public CarDataApi(HttpClient httpClient, AccessTokenProvider tokenProvider, Runnable tokenRejected,
+            RequestBudget budget) {
+        this(httpClient, tokenProvider, tokenRejected, budget, BASE_URL);
+    }
+
+    // for tests against a local server
+    CarDataApi(HttpClient httpClient, AccessTokenProvider tokenProvider, Runnable tokenRejected, RequestBudget budget,
+            String baseUrl) {
         this.httpClient = httpClient;
         this.tokenProvider = tokenProvider;
+        this.tokenRejected = tokenRejected;
         this.budget = budget;
+        this.baseUrl = baseUrl;
     }
 
     /**
@@ -140,6 +159,13 @@ public class CarDataApi {
     }
 
     /**
+     * @param containerId the container to delete
+     */
+    public void deleteContainer(String containerId) throws IOException, CarDataAuthException, CarDataApiException {
+        request(HttpMethod.DELETE, "/customers/containers/" + encode(containerId), null);
+    }
+
+    /**
      * @param vin vehicle identification number
      * @param containerId container to read
      * @return the current values of the container's descriptors
@@ -162,7 +188,9 @@ public class CarDataApi {
             }
             JsonObject item = entry.getValue().getAsJsonObject();
             JsonElement value = item.get("value");
-            if (value == null) {
+            // the container lists every descriptor, those without data with a null value and timestamp; these carry no
+            // information, and applying them would set channels the stream filled to UNDEF
+            if (value == null || value.isJsonNull()) {
                 continue;
             }
             values.add(new TelematicValue(entry.getKey(), value, string(item, "unit"),
@@ -177,14 +205,17 @@ public class CarDataApi {
         if (!budget.tryAcquire()) {
             throw CarDataApiException.budgetExhausted(budget.used(), budget.budget());
         }
-        Request request = httpClient.newRequest(BASE_URL + path).method(method)
+        Request request = httpClient.newRequest(baseUrl + path).method(method)
                 .header(HttpHeader.AUTHORIZATION, "Bearer " + token).header("x-version", API_VERSION)
                 .header(HttpHeader.ACCEPT, "application/json").timeout(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         if (body != null) {
             request.content(new StringContentProvider("application/json", body, StandardCharsets.UTF_8));
         }
-        logger.debug("CarData request {} {} ({} of {} requests used today)", method, path, budget.used(),
-                budget.budget());
+        logger.debug("CarData request {} {} ({} of {} requests used today)", method, LogRedaction.vins(path),
+                budget.used(), budget.budget());
+        if (body != null && logger.isTraceEnabled()) {
+            logger.trace("CarData request {} {} body: {}", method, LogRedaction.vins(path), LogRedaction.payload(body));
+        }
 
         ContentResponse response;
         try {
@@ -192,15 +223,25 @@ public class CarDataApi {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Interrupted while calling CarData API", e);
-        } catch (TimeoutException | ExecutionException e) {
+        } catch (ExecutionException e) {
+            if (isUnauthorizedResponse(e)) {
+                logger.trace("CarData response {} {} -> HTTP 401", method, LogRedaction.vins(path));
+                tokenRejected.run();
+                throw new CarDataApiException(HttpStatus.UNAUTHORIZED_401, null,
+                        "CarData API returned HTTP " + HttpStatus.UNAUTHORIZED_401);
+            }
+            throw new IOException("Failed to call CarData API: " + e.getMessage(), e);
+        } catch (TimeoutException e) {
             throw new IOException("Failed to call CarData API: " + e.getMessage(), e);
         }
 
         int status = response.getStatus();
-        if (logger.isTraceEnabled()) {
-            logResponseHeaders(method, path, status, response.getHeaders());
-        }
         String content = response.getContentAsString();
+        if (logger.isTraceEnabled()) {
+            // BMW support can trace a request by its id
+            logger.trace("CarData response {} {} -> HTTP {}, request id {}, body: {}", method, LogRedaction.vins(path),
+                    status, response.getHeaders().get(REQUEST_ID_HEADER), LogRedaction.payload(content));
+        }
         if (status >= 200 && status < 300) {
             if (content == null || content.isBlank()) {
                 return new JsonObject();
@@ -215,19 +256,28 @@ public class CarDataApi {
         CarDataApiException exception = toException(status, content);
         if (exception.isRateLimited()) {
             budget.markExhausted();
+        } else if (exception.isUnauthorized()) {
+            tokenRejected.run();
         }
         throw exception;
     }
 
-    private void logResponseHeaders(HttpMethod method, String path, int status, HttpFields headers) {
-        StringBuilder text = new StringBuilder();
-        for (HttpField header : headers) {
-            if (HttpHeader.SET_COOKIE.is(header.getName())) {
-                continue;
+    /**
+     * Recognizes a 401 response in a failed request. BMW answers 401 without the WWW-Authenticate header the HTTP
+     * specification requires; Jetty's authentication handler, part of every openHAB HTTP client, turns such a response
+     * into an exception. The status survives in the exception, the body with BMW's error does not.
+     *
+     * @param e failure of a request, also when wrapped, e.g. by core's OAuth client
+     * @return whether the server answered 401
+     */
+    public static boolean isUnauthorizedResponse(Throwable e) {
+        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+            if (cause instanceof HttpResponseException responseException
+                    && responseException.getResponse().getStatus() == HttpStatus.UNAUTHORIZED_401) {
+                return true;
             }
-            text.append("\n  ").append(header.getName()).append(": ").append(header.getValue());
         }
-        logger.trace("CarData response {} {} -> HTTP {}, headers:{}", method, path, status, text);
+        return false;
     }
 
     private CarDataApiException toException(int status, @Nullable String content) {
